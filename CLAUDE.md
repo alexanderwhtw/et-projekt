@@ -15,7 +15,8 @@ wird relativ dazu bestimmt.
 
 ## Hardware
 
-- Raspberry Pi 4B — primäre Entwicklungsplattform
+- Raspberry Pi 4B — primäre Entwicklungsplattform (Ziel: Entwicklung direkt
+  auf dem Pi via VS Code Remote-SSH, nicht auf dem Host-Rechner)
 - Arducam B0266 Stereo-Kit: 2× OV9281 Global-Shutter, Camarray-HAT, CSI,
   hardware-synchronisiert
 - Jetson Nano (später, Portierung, Modell noch offen)
@@ -43,22 +44,69 @@ wird relativ dazu bestimmt.
    gegen Referenz
 4. **Ausblick** — SLAM/visuelle Odometrie, nur konzeptionell in der Arbeit
 
-Aktuelle Phase: **0 → 1** (Repo/Doku-Setup abgeschlossen, als Nächstes
-Hardware-Bring-up: B0266 physisch montieren, Kamera-Treiber testen)
+Aktuelle Phase: **1** (Dev-Workflow-Setup: SSH/VS Code/Claude Code auf dem
+Pi, danach Hardware-Montage + Bring-up)
 
-## Architektur-Vorgabe
+## Repo-Struktur
 
-Code modular und klar getrennt halten, damit später ein ROS2-Wrapper dünn
-bleiben kann. Grobe Modulaufteilung:
-
-- `calibration/` — Intrinsic/Extrinsic-Kalibrierung, Rektifizierung
-- `capture/` — Kamera-I/O, synchronisierte Bildaufnahme
-- `localization/` — Feature-Detektion, Disparität, Pose-Schätzung relativ
-  zur Map
-- `evaluation/` — Messreihen, Fehlermetriken, Auswertung
+```
+et-projekt/
+  CLAUDE.md
+  requirements.txt
+  src/
+    calibration/   # intrinsic/extrinsic Kalibrierung, Rektifizierung
+    capture/        # Kamera-I/O, synchronisierte Bildaufnahme
+    localization/   # Feature-Detektion, Disparität, Pose-Schätzung
+    evaluation/      # Messreihen, Fehlermetriken
+  tests/            # pytest, reine Logik ohne laufende Kamera testbar
+  scripts/          # visuelle Sanity-Check-Skripte (siehe unten)
+  data/
+    calibration_images/
+    reference_points.yaml   # vermessene Referenzpunkte im Testraum
+  results/
+    calibration/    # Kalibrierergebnisse, versioniert mit Datum
+    measurements/   # Messreihen-Ergebnisse
+  docs/
+    decisions.md    # Entscheidungs-Log (siehe unten)
+```
 
 Reine Logik (Berechnung) von I/O (Kamerazugriff, Dateisystem) trennen —
 Kernfunktionen sollen ohne laufende Kamera testbar sein.
+
+## Nachvollziehbarkeit / Test- & Validierungsstruktur
+
+Ziel: Code und Code-Änderungen müssen jederzeit nachvollziehbar bleiben,
+auch bei KI-generiertem Code ("Vibe Coding"-Risiko: Überblick verlieren).
+
+- **Git-Disziplin**: kleine, atomare Commits pro logischem Schritt.
+  Commit-Messages nennen das *Warum*, nicht nur das *Was*. Kein Commit ohne
+  vorher `git diff` gelesen zu haben.
+- **Unit-Tests (pytest)**: jede neue Funktion in `src/` bekommt mind. einen
+  Test in `tests/` mit bekanntem Input/Output. Tests laufen ohne Kamera.
+- **Visuelle Sanity-Check-Skripte** (`scripts/`, getrennt von Unit-Tests):
+  - `check_calibration.py` — Reprojection-Error-Plot
+  - `check_rectification.py` — rektifizierte Bilder mit horizontalen
+    Referenzlinien (müssen sich links/rechts decken)
+  - `check_disparity.py` — Disparitätskarte visualisieren
+  - Zweck: CV-Fehler sind oft nur visuell erkennbar, nicht nur an Zahlen
+- **Ergebnis-Log** (`results/`): jede Kalibrierung/Messreihe als eigene
+  Datei mit Datum + Parametern + Kennzahlen, nicht überschreiben
+- **Entscheidungs-Log** (`docs/decisions.md`): kurze Einträge bei
+  nicht-trivialen Entscheidungen ("Warum ORB statt SIFT", "Warum dieser
+  Schwellwert") — auch als Grundlage für die schriftliche Arbeit
+
+## Regeln für Claude Code (Arbeitsweise in diesem Repo)
+
+- Vor jeder nicht-trivialen Änderung kurz erklären, was und warum geändert
+  wird
+- Nie ungefragt committen — der User liest den Diff und entscheidet
+- Zu neuer Logik in `src/` immer einen Test in `tests/` mitliefern
+- Bei Unsicherheit über Ansatz/Threshold: Rückfrage statt Annahme, und
+  Begründung ggf. in `docs/decisions.md` festhalten
+
+## Architektur-Vorgabe
+
+Siehe Repo-Struktur oben. Logik und I/O getrennt halten.
 
 ## Konventionen
 

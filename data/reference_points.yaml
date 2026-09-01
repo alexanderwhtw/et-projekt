@@ -1,0 +1,8 @@
+# Vermessene Referenzpunkte im Testraum (Weltkoordinaten in Metern).
+# Wird nach der Vermessung des Testbereichs befüllt (Phase 1/2).
+#
+# Format:
+# points:
+#   <id>: [x, y, z]
+
+points: {}

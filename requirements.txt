@@ -1,0 +1,5 @@
+opencv-contrib-python>=4.9
+numpy
+pyyaml
+matplotlib
+pytest
