@@ -12,6 +12,10 @@ env/
 .pytest_cache/
 .mypy_cache/
 
+# Ad-hoc Settings-/Kalibrier-Testaufnahmen (nicht die finale Kalibrier-Datenbasis,
+# siehe data/calibration_images/ und results/ dafür)
+/cal/
+
 # LaTeX
 *.aux
 *.log
