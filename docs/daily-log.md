@@ -62,3 +62,39 @@ eigentlichen Kalibrier-Code (Phase 1). Ad-hoc-Testbilder/-Skripte liegen in
   Repo-Root verschoben und in `.gitignore` aufgenommen (Wunsch: Bilder im
   Projektordner statt an anderer Stelle auf dem Mac, aber nicht in der
   Git-Historie).
+
+## 2026-09-03 (Tag 3)
+
+Erstes Schachbrett gedruckt (8×8 Felder, 24mm Kantenlänge, DIN A4,
+online gefundenes Muster) und für Testzwecke an einer Stuhllehne
+positioniert. Vier Testaufnahmen in verschiedenen Posen, ausgewertet mit
+neuen Skripten `cal/check_corners.py` (Ecken-Erkennung via
+`cv2.findChessboardCornersSB`) — alle 49 Ecken (7×7 Innenecken) in jeder
+Pose in L und R gefunden.
+
+- Belichtung von Tag 2 (`--shutter 3500`) reichte bei den heutigen
+  (dunkleren) Lichtverhältnissen nicht — Board lag im Schatten, Ecken
+  nicht erkennbar. Neuer Kandidat: `--shutter 10000 --gain 1.0
+  --awbgains 1.0,1.0 --denoise off`. Erkenntnis: Belichtung ist
+  sitzungsabhängig, nicht projektweit fest verdrahten.
+- **Wichtiger Befund**: Das 8×8-Muster (7×7 Innenecken, symmetrisch)
+  erzeugt eine empirisch bestätigte Ecken-Reihenfolge-Mehrdeutigkeit
+  zwischen L/R (`cv2.findChessboardCorners` liefert die Punktliste teils
+  gegenläufig sortiert). Für die heutigen Sanity-Checks unproblematisch,
+  für `stereoCalibrate` aber blockierend — neues asymmetrisches Muster
+  (z.B. 9×6) muss vor der echten Kalibrier-Datenaufnahme gedruckt werden.
+- Verzeichnungsprüfung (Zeilen-Geraden-Abweichung der erkannten Ecken):
+  max. 0,37px selbst nah am Bildrand → Objektiv scheint wenig verzeichnet,
+  aber noch nicht in der äußersten Bildecke getestet.
+- L/R-Helligkeitsunterschied auf der Board-Fläche selbst nur 1,2–2,9 %,
+  deutlich kleiner als der Szenen-Unterschied aus Tag 2 (~6 %) — plausibel,
+  da hier nahezu identischer Bildinhalt verglichen wird.
+- Bei ~2m Distanz (obere Grenze des Zielarbeitsbereichs) nur noch
+  ~10,5px pro Feld im Bild, Ecken trotzdem zuverlässig erkannt.
+- Technischer Nebenbefund: `cv2.CALIB_CB_FAST_CHECK` lehnt große/stark
+  gekippte Bretter fälschlich ab — `findChessboardCornersSB` ohne dieses
+  Flag verwenden (relevant für spätere `src/calibration`-Implementierung).
+- Nicht mehr geschafft (→ Tag 4): Fokus mechanisch fixieren, neues
+  asymmetrisches Muster drucken, Schachbrett fest montieren, Quadratgröße
+  nachmessen, gezielte Beleuchtungsprüfung, Nahbereich-Testaufnahme
+  (~0,3m), Namenskonvention für `data/calibration_images/`.

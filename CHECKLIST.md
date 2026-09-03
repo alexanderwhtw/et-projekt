@@ -41,14 +41,22 @@
 - 🟢 `rpicam-still --list-controls` gibt es in dieser rpicam-apps-Version (v1.13.0) nicht (`unrecognised option`) — stattdessen relevante Controls aus `rpicam-still --help` extrahiert und dokumentiert (`--shutter`, `--gain`, `--awb`, `--awbgains`, `--denoise`, `--metering`, `--ev`, `--sharpness`)
 - 🟢 Heutige Settings-Entscheidungen (Exposure/Gain-Werte, Baseline, Roll-Verkippung, Sync-Verifikation) in `docs/decisions.md` festgehalten
 
-## Tag 3 (geplant) — übernommen von Tag 2, nicht mehr geschafft
+## Tag 3 (2026-09-03) — Schachbrett-Testaufnahmen & Belichtung nachjustiert
+
+- 🟢 Belichtungs-Kandidat aus Tag 2 mit echtem Schachbrett-Motiv nachjustiert: `--shutter 3500` war bei den heutigen (dunkleren) Lichtverhältnissen zu knapp (Board lag im Schatten, "weiße" Felder nur ~mittelgrau, Ecken nicht erkennbar) → neuer Kandidat **`--shutter 10000 --gain 1.0 --awbgains 1.0,1.0 --denoise off`**, alle 49 Ecken zuverlässig erkannt (`cv2.findChessboardCornersSB`). Lichtverhältnisse sind also nicht stabil zwischen Sitzungen — Belichtung muss pro Session neu geprüft werden, nicht fest verdrahten
+- 🟢 4 Testaufnahmen mit Positions-/Winkel-/Distanz-Variation: frontal 1m, Ecke oben-links gekippt (~1m), weit rechts stark gekippt (~1m), frontal ~2m — alle 49 Ecken jeweils zuverlässig erkannt. Bei 2m nur noch ~10,5px/Feld (Board sehr klein im Bild), Erkennung funktioniert trotzdem, aber Subpixel-Genauigkeit der Ecken dürfte dort geringer sein
+- 🟢 Visuelle/quantitative Verzeichnungsprüfung: Zeilen der erkannten Eckpunkte auf Geraden-Abweichung geprüft, max. 0,37px selbst nah am rechten Bildrand → sehr geringe Linsenverzeichnung im getesteten Bereich. Details in `docs/decisions.md`
+- 🟢 Helligkeitsabgleich L/R (mit Schachbrett-Motiv, quantitativ statt nur visuell): 1,2–2,9 % Unterschied auf der Board-Fläche über alle 3 Posen — deutlich kleiner als der ~6 % Szenen-Unterschied aus Tag 2 (dort ganzes, unterschiedlich beleuchtetes Bild verglichen), unkritisch
+- 🔴 **Befund**: 8×8-Schachbrett (7×7 Innenecken, symmetrisch) hat empirisch bestätigte Ecken-Reihenfolge-Mehrdeutigkeit zwischen L/R (`cv2.findChessboardCorners` liefert die Punktliste in L und R teils in entgegengesetzter Reihenfolge). Für Sanity-Checks unproblematisch, aber für `stereoCalibrate` (braucht konsistente Punkt-Korrespondenz) blockierend. **→ neues asymmetrisches Muster nötig, siehe Tag 4.** Details in `docs/decisions.md`
+- 🟢 (Technischer Nebenbefund) `cv2.CALIB_CB_FAST_CHECK` erzeugt bei großen/stark gekippten Brettern falsche Negative — für `src/calibration` `findChessboardCornersSB` ohne dieses Flag verwenden (`cal/check_corners.py` als Referenz)
+
+## Tag 4 (geplant) — übernommen von Tag 2/3, nicht mehr geschafft
 
 - 🟡 Fokus auf Zielbereich (0,3–2m) scharfstellen und mechanisch fixieren (Fokusring sichern) — physischer Schritt an der Kamera; danach Schärfe im Zentrum UND am Bildrand prüfen
-- 🟡 Schachbrett auf ebener, harter Unterlage montieren (nicht gewellt/gebogen)
-- 🟡 Quadratgröße exakt nachmessen (mm) statt dem Druck zu vertrauen — Wert wird in `src/calibration` gebraucht
-- 🟡 Beleuchtung für Kalibrieraufnahmen prüfen: gleichmäßig, keine Reflexionen/Überbelichtung auf dem Muster
-- 🟡 Ein paar Schachbrett-Testaufnahmen in verschiedenen Winkeln/Distanzen (Abdeckung 0,3–2m + Bildränder), Namenskonvention für `data/calibration_images/` festlegen
-- 🟡 Belichtungs-Kandidat aus Tag 2 (`--shutter 3500 --gain 1.0 --awbgains 1.0,1.0 --denoise off`) mit echtem Schachbrett-Motiv nachjustieren (weiße Felder dürfen nicht clippen)
-- 🟡 Visuelle Verzeichnungsprüfung: gerade Linien nahe Bildrand auf Tonnen-/Kissenverzeichnung checken
-- 🟡 Helligkeitsabgleich L/R visuell vergleichen (mit Schachbrett-Motiv)
+- 🟡 Neues, asymmetrisches Schachbrett drucken (z.B. 9×6 Innenecken statt 7×7) — vermeidet die Ecken-Reihenfolge-Mehrdeutigkeit aus Tag 3, siehe `docs/decisions.md`
+- 🟡 Schachbrett auf ebener, harter Unterlage montieren (nicht gewellt/gebogen) — aktuell nur an Stuhllehne gehalten/geklemmt
+- 🟡 Quadratgröße exakt nachmessen (mm) statt dem Druck zu vertrauen (Sollwert 24mm, real noch nicht mit Lineal/Messschieber verifiziert) — Wert wird in `src/calibration` gebraucht
+- 🟡 Beleuchtung für Kalibrieraufnahmen gezielt prüfen: gleichmäßig, keine Reflexionen/Überbelichtung auf dem Muster (bisher nur indirekt über Belichtungs-Settings behandelt)
+- 🟡 Testaufnahme im Nahbereich (~0,3–0,4m) — bisher nur ~1m und ~2m getestet
+- 🟡 Namenskonvention für `data/calibration_images/` festlegen (z.B. `left_NNN.png`/`right_NNN.png` oder Pose-Label im Dateinamen)
 
