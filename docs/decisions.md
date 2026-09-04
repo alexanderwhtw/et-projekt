@@ -201,3 +201,25 @@ für die schriftliche Arbeit.
 - Kontext: Board aktuell nur an Stuhllehne positioniert/geklemmt (siehe Tag-3-Checkliste), kein fester Untergrund.
 - Entscheidung: Für erste Software-/Erkennungstests akzeptiert, da die Fläche subjektiv ausreichend eben ist. Feste Montage auf harter, ebener Unterlage bleibt offen für den finalen Kalibrier-Datensatz.
 - Begründung: Kein Blocker fürs Aufsetzen der Kalibrier-Pipeline (Phase 1 startet mit Code-Struktur, nicht mit finalen Messdaten). Risiko: leichte Wölbung/Instabilität könnte in den finalen Kalibrierbildern minimale Ungenauigkeit einbringen — vor der eigentlichen finalen Datenaufnahme nochmal prüfen.
+
+## 2026-09-04 — Projekt-Prinzip: erst funktionale Pipeline, dann Fine-Tuning
+
+- Kontext: Mehrere offene Tag-4-Punkte (Beleuchtung optimieren, Nahbereichstest, ggf. spätere Fokus-Feinjustage) sind Präzisions-/Vollständigkeits-Aufgaben. Der aktuelle Prototyp-Aufbau (Nagel-Halterung, Sessellehnen-Montage) ist ohnehin nicht auf Endgenauigkeit ausgelegt.
+- Entscheidung: Priorität ab jetzt auf einer durchgängig funktionierenden Kalibrier-/Lokalisierungs-Pipeline (Ende-zu-Ende), auch mit bekannten Ungenauigkeiten in Mechanik/Beleuchtung/Fokus/Posenabdeckung. Exaktheit/Fine-Tuning (mechanische Stabilisierung, Beleuchtungsoptimierung, vollständige Distanz-/Posenabdeckung) wird auf eine spätere Phase verschoben, nachdem die Pipeline grundsätzlich steht.
+- Begründung: Für PoC-Niveau (siehe CLAUDE.md) ist eine funktionierende, nachvollziehbare Pipeline wichtiger als frühzeitige Präzisionsoptimierung an einem ohnehin noch provisorischen Aufbau — Optimierungsaufwand an der aktuellen Halterung wäre teilweise hinfällig, sobald eine stabilere Halterung existiert.
+- Risiko/Konsequenz: Ergebnisse aus dieser Phase (Reprojection Error etc.) sind nicht final aussagekräftig und müssen bei der finalen Datenaufnahme wiederholt werden — bewusst in Kauf genommen, sollte in der schriftlichen Arbeit als Zwischenstand markiert werden, nicht als Endergebnis.
+
+## 2026-09-04 — Fokus: keine manuelle Verstellmöglichkeit gefunden
+
+- Kontext: Tag-4-Punkt "Fokusring sichern" — beim Versuch, den Fokus zu prüfen/fixieren, keine zugängliche Einstellmöglichkeit am Kameramodul gefunden; Fokus lässt sich nicht manuell verschieben.
+- Konsequenz: Punkt als nicht-aktionabel akzeptiert. Ob der Werksfokus optimal für den Zielbereich 0,3–2m ist, bleibt ungeprüft — falls später Schärfeprobleme auffallen (z.B. auffällig hoher Reprojection Error oder sichtbar unscharfe Ecken bei der Subpixel-Verfeinerung), Arducam-B0266/OV9281-Datenblatt auf Fixfokus-Spezifikation prüfen.
+
+## 2026-09-04 — Quadratgröße verifiziert: 24mm
+
+- Kontext: Tag-4-Punkt, mit Lineal/Messschieber nachgemessen statt dem Druck zu vertrauen.
+- Ergebnis: 24mm bestätigt — Sollwert aus dem Druck stimmt mit der Realität überein. Wert für `src/calibration` (Skalierung der 3D-Objektpunkte `objp`) direkt verwendbar.
+
+## 2026-09-04 — Nahbereichstest (~0,3m) verschoben
+
+- Kontext: Tag-4-Punkt, aktueller Prototyp-Aufbau (Sessellehnen-Montage, Nagel-Halterung) lässt sich nicht ohne größeren Umbau für Nahbereich-Aufnahmen anpassen.
+- Entscheidung: Verschoben auf einen späteren Zeitpunkt (nach stabilerer Halterung oder im Rahmen des späteren Fine-Tunings, siehe Projekt-Prinzip oben). Kein Blocker für den funktionalen Kalibrier-Code — Nahbereichsabdeckung ist eine Vollständigkeitsfrage, keine Grundvoraussetzung für eine erste funktionierende Pipeline.

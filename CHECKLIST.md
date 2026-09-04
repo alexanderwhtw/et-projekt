@@ -52,11 +52,13 @@
 
 ## Tag 4 (geplant) — übernommen von Tag 2/3, nicht mehr geschafft
 
-- 🟡 Fokus auf Zielbereich (0,3–2m) scharfstellen und mechanisch fixieren (Fokusring sichern) — physischer Schritt an der Kamera; danach Schärfe im Zentrum UND am Bildrand prüfen
-- 🟡 Vorhandenes 8×8-Feld-Schachbrett um eine äußere Feldreihe beschneiden → 8×7 Felder = 6×7 Innenecken (asymmetrisch, statt neu zu drucken) — vermeidet die Ecken-Reihenfolge-Mehrdeutigkeit aus Tag 3, Schnitt muss exakt auf einer Feldgrenze liegen; danach 6×7-Erkennung auf beiden Kameras gegenchecken, siehe `docs/decisions.md`
-- 🟢 Schachbrett-Montage: Stuhllehne für erste Software-/Erkennungstests akzeptiert (subjektiv ausreichend eben) — feste Montage auf harter Unterlage bleibt offen für den finalen Kalibrier-Datensatz, siehe `docs/decisions.md`
-- 🟡 Quadratgröße exakt nachmessen (mm) statt dem Druck zu vertrauen (Sollwert 24mm, real noch nicht mit Lineal/Messschieber verifiziert) — Wert wird in `src/calibration` gebraucht
-- 🟡 Beleuchtung für Kalibrieraufnahmen gezielt prüfen: gleichmäßig, keine Reflexionen/Überbelichtung auf dem Muster (bisher nur indirekt über Belichtungs-Settings behandelt)
-- 🟡 Testaufnahme im Nahbereich (~0,3–0,4m) — bisher nur ~1m und ~2m getestet
+- 🟢 Fokus: keine manuell zugängliche Einstellmöglichkeit am Kameramodul gefunden, lässt sich nicht verschieben — Punkt als nicht-aktionabel akzeptiert (nichts zu fixieren), siehe `docs/decisions.md`
+- 🟢 Schachbrett zugeschnitten (6×7 Innenecken) — per Testaufnahme verifiziert: `findChessboardCornersSB` findet 7×7 nicht mehr, 6×7 zuverlässig und konsistent in L/R, Ecken-Reihenfolge-Mehrdeutigkeit aus Tag 3 behoben
+- 🟢 Schachbrett-Montage: auf Kartonplatte geklebt, an Stuhllehne befestigt, für aktuelle Funktions-Phase akzeptiert — feste Montage auf harter Unterlage bleibt offen fürs spätere Fine-Tuning, siehe `docs/decisions.md`
+- 🟢 Quadratgröße mit Lineal/Messschieber nachgemessen: **24mm bestätigt** (Sollwert = Realwert)
+- 🟡 Beleuchtung für Kalibrieraufnahmen gezielt prüfen (gleichmäßig, keine Reflexionen/Überbelichtung) — zurückgestellt, Prinzip ab jetzt: erst funktionale Pipeline, dann Fine-Tuning, siehe `docs/decisions.md`
+- 🟡 Testaufnahme im Nahbereich (~0,3–0,4m) — verschoben, aktueller Prototyp-Aufbau lässt sich nicht ohne größeren Umbau für Nahbereich anpassen, siehe `docs/decisions.md`
 - 🟢 Namenskonvention für `data/calibration_images/` festgelegt: `left_NNN.png`/`right_NNN.png` (3-stelliger Index als L/R-Paar-ID) + Begleit-Manifest `manifest.csv` für Pose-/Settings-Metadaten, siehe `docs/decisions.md`
+
+**Prinzip ab jetzt (siehe `docs/decisions.md`):** erst eine durchgängig funktionierende Kalibrier-/Lokalisierungs-Pipeline bauen, auch mit bekannten Ungenauigkeiten in Mechanik/Beleuchtung/Fokus. Exaktheit/Fine-Tuning kommt in einer späteren Phase, wenn die Pipeline grundsätzlich steht.
 

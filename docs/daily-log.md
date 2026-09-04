@@ -98,3 +98,31 @@ Pose in L und R gefunden.
   asymmetrisches Muster drucken, Schachbrett fest montieren, Quadratgröße
   nachmessen, gezielte Beleuchtungsprüfung, Nahbereich-Testaufnahme
   (~0,3m), Namenskonvention für `data/calibration_images/`.
+
+## 2026-09-04 (Tag 4)
+
+Statt eines neuen 9×6-Musters wurde das vorhandene 8×8-Feld-Schachbrett um
+eine äußere Feldreihe beschnitten (→ 6×7 Innenecken, asymmetrisch) und auf
+eine Kartonplatte geklebt, an der Stuhllehne befestigt. Namenskonvention
+für `data/calibration_images/` festgelegt (`left_NNN.png`/`right_NNN.png`
++ `manifest.csv`), Details siehe `docs/decisions.md`.
+
+- Testaufnahme vom Pi geholt und ausgewertet: `findChessboardCornersSB`
+  findet 7×7 nicht mehr, 6×7 zuverlässig und mit konsistenter
+  Eckreihenfolge in L/R — Zuschnitt hat den Tag-3-Bug behoben. L/R-
+  Helligkeit auf der Board-Fläche fast identisch (94,4 vs. 93,7, ≈0,7 %).
+  Board stand in diesem Test spürbar nicht-frontal zur Kamera (deutliche
+  Foreshortening in x vs. y) — für künftige Aufnahmen auch eine frontale
+  Pose einplanen.
+- Fokus: keine manuell zugängliche Einstellmöglichkeit am Kameramodul
+  gefunden — Punkt als nicht-aktionabel akzeptiert, nichts zu fixieren.
+- Quadratgröße mit Messschieber/Lineal nachgemessen: 24mm bestätigt.
+- Nahbereichstest (~0,3m) verschoben — aktueller Prototyp-Aufbau lässt
+  sich nicht ohne größeren Umbau dafür anpassen.
+- Beleuchtungsprüfung zurückgestellt.
+- Projekt-Prinzip festgelegt: erst eine durchgängig funktionierende
+  Pipeline bauen (auch mit bekannten Ungenauigkeiten in Mechanik/
+  Beleuchtung/Fokus), Fine-Tuning/Exaktheit erst in einer späteren Phase.
+  Details siehe `docs/decisions.md`.
+- Damit ist Tag 4 inhaltlich abgeschlossen — nächster Schritt: Beginn der
+  eigentlichen `src/calibration`-Implementierung (Phase 1).
