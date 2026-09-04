@@ -180,3 +180,24 @@ für die schriftliche Arbeit.
   Kalibrierdatensammlung ggf. mehr Aufnahmen im Nah-/Mittelbereich
   gewichten und Fernbereich (~2m) nicht übergewichten, da unpräziser.
 - Noch offen: Nahbereich (~0,3m) nicht getestet.
+
+## 2026-09-04 — Schachbrett wird zugeschnitten statt neu gedruckt (7×7 → 6×7 Innenecken)
+
+- Kontext: Tag-3-Befund (Ecken-Reihenfolge-Mehrdeutigkeit bei symmetrischem 7×7-Muster) erfordert ein asymmetrisches Muster für `stereoCalibrate`. Ursprünglich vorgemerkt: neues 9×6-Muster drucken (CHECKLIST.md Tag 4).
+- Alternativen: (a) neues Muster drucken, (b) vorhandenes 8×8-Feld-Board um eine äußere Feldreihe beschneiden → 8×7 Felder = 6×7 Innenecken (asymmetrisch).
+- Begründung: (b) gewählt. Die Mehrdeutigkeit entsteht durch gleiche Zeilen-/Spaltenzahl, nicht durch die konkrete Größe 9×6 — jedes asymmetrische Format löst das Problem. Zuschneiden spart Druck/Papier und die erneute Unsicherheit der Quadratgröße eines neuen Ausdrucks; das vorhandene Board (Kantenlänge nominell 24mm, Verifikation offen) wird weiterverwendet.
+- Bedingungen: Schnitt muss exakt entlang einer Feldgrenze liegen (nicht mitten durch eine Reihe), damit alle verbleibenden Felder volle 24mm-Quadrate bleiben; möglichst etwas weißen Rand stehen lassen. Nach dem Schnitt Erkennung (6×7 statt 7×7, konsistent zwischen L/R) mit `findChessboardCornersSB` gegenchecken.
+- Konsequenz für Code: `patternSize` in `src/calibration` künftig `(6, 7)` (oder `(7, 6)`, je nach Achsenkonvention) statt `(7, 7)`.
+
+## 2026-09-04 — Namenskonvention `data/calibration_images/` festgelegt
+
+- Kontext: Seit Tag 3 offener Punkt aus CHECKLIST.md.
+- Entscheidung: `left_NNN.png` / `right_NNN.png`, `NNN` = 3-stelliger, nullgepaddeter Index als gemeinsame Paar-ID zwischen L/R (kein Timestamp-Matching nötig). Zusätzlich Begleit-Manifest `data/calibration_images/manifest.csv` mit Spalten `index,distanz_m,notiz,shutter,gain,timestamp` für Pose-/Settings-Metadaten je Aufnahme.
+- Alternativen: Pose-Label direkt im Dateinamen (z.B. `left_1m_frontal.png`) — verworfen, da unübersichtlich bei vielen Aufnahmen und schlecht script-freundlich (Sortierung, `glob`-Paarbildung).
+- Begründung: Index-basierte Dateinamen bleiben eindeutig sortierbar und einfach programmatisch zu paaren. Manifest-CSV folgt demselben Muster wie `cal/opt_calib.csv` (bereits etabliert für Ad-hoc-Settings-Tests), jetzt für den finalen Kalibrier-Datensatz.
+
+## 2026-09-04 — Stuhllehnen-Montage für erste Tests akzeptiert
+
+- Kontext: Board aktuell nur an Stuhllehne positioniert/geklemmt (siehe Tag-3-Checkliste), kein fester Untergrund.
+- Entscheidung: Für erste Software-/Erkennungstests akzeptiert, da die Fläche subjektiv ausreichend eben ist. Feste Montage auf harter, ebener Unterlage bleibt offen für den finalen Kalibrier-Datensatz.
+- Begründung: Kein Blocker fürs Aufsetzen der Kalibrier-Pipeline (Phase 1 startet mit Code-Struktur, nicht mit finalen Messdaten). Risiko: leichte Wölbung/Instabilität könnte in den finalen Kalibrierbildern minimale Ungenauigkeit einbringen — vor der eigentlichen finalen Datenaufnahme nochmal prüfen.

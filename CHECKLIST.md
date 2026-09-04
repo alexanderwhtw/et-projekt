@@ -53,10 +53,10 @@
 ## Tag 4 (geplant) — übernommen von Tag 2/3, nicht mehr geschafft
 
 - 🟡 Fokus auf Zielbereich (0,3–2m) scharfstellen und mechanisch fixieren (Fokusring sichern) — physischer Schritt an der Kamera; danach Schärfe im Zentrum UND am Bildrand prüfen
-- 🟡 Neues, asymmetrisches Schachbrett drucken (z.B. 9×6 Innenecken statt 7×7) — vermeidet die Ecken-Reihenfolge-Mehrdeutigkeit aus Tag 3, siehe `docs/decisions.md`
-- 🟡 Schachbrett auf ebener, harter Unterlage montieren (nicht gewellt/gebogen) — aktuell nur an Stuhllehne gehalten/geklemmt
+- 🟡 Vorhandenes 8×8-Feld-Schachbrett um eine äußere Feldreihe beschneiden → 8×7 Felder = 6×7 Innenecken (asymmetrisch, statt neu zu drucken) — vermeidet die Ecken-Reihenfolge-Mehrdeutigkeit aus Tag 3, Schnitt muss exakt auf einer Feldgrenze liegen; danach 6×7-Erkennung auf beiden Kameras gegenchecken, siehe `docs/decisions.md`
+- 🟢 Schachbrett-Montage: Stuhllehne für erste Software-/Erkennungstests akzeptiert (subjektiv ausreichend eben) — feste Montage auf harter Unterlage bleibt offen für den finalen Kalibrier-Datensatz, siehe `docs/decisions.md`
 - 🟡 Quadratgröße exakt nachmessen (mm) statt dem Druck zu vertrauen (Sollwert 24mm, real noch nicht mit Lineal/Messschieber verifiziert) — Wert wird in `src/calibration` gebraucht
 - 🟡 Beleuchtung für Kalibrieraufnahmen gezielt prüfen: gleichmäßig, keine Reflexionen/Überbelichtung auf dem Muster (bisher nur indirekt über Belichtungs-Settings behandelt)
 - 🟡 Testaufnahme im Nahbereich (~0,3–0,4m) — bisher nur ~1m und ~2m getestet
-- 🟡 Namenskonvention für `data/calibration_images/` festlegen (z.B. `left_NNN.png`/`right_NNN.png` oder Pose-Label im Dateinamen)
+- 🟢 Namenskonvention für `data/calibration_images/` festgelegt: `left_NNN.png`/`right_NNN.png` (3-stelliger Index als L/R-Paar-ID) + Begleit-Manifest `manifest.csv` für Pose-/Settings-Metadaten, siehe `docs/decisions.md`
 
