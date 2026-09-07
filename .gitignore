@@ -16,6 +16,10 @@ env/
 # siehe data/calibration_images/ und results/ dafür)
 /cal/
 
+# Wegwerf-Ausgaben der visuellen Sanity-Check-Skripte (jederzeit neu erzeugbar,
+# siehe scripts/check_*.py)
+/scripts/output/
+
 # LaTeX
 *.aux
 *.log

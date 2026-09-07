@@ -202,6 +202,23 @@ für die schriftliche Arbeit.
 - Entscheidung: Für erste Software-/Erkennungstests akzeptiert, da die Fläche subjektiv ausreichend eben ist. Feste Montage auf harter, ebener Unterlage bleibt offen für den finalen Kalibrier-Datensatz.
 - Begründung: Kein Blocker fürs Aufsetzen der Kalibrier-Pipeline (Phase 1 startet mit Code-Struktur, nicht mit finalen Messdaten). Risiko: leichte Wölbung/Instabilität könnte in den finalen Kalibrierbildern minimale Ungenauigkeit einbringen — vor der eigentlichen finalen Datenaufnahme nochmal prüfen.
 
+## 2026-09-04 — Methodenwechsel: map-based → einfache Visuelle Odometrie (VO) ohne Loop-Closure
+
+- Kontext: Ursprünglicher Plan (siehe `projektbrief.md` Stand 2026-08-31, mit Betreuer-Kontext Prof. Borchers-Tigasson): map-based Ansatz — Referenzpunkte im Testraum vorher vermessen, Pose zur Laufzeit per PnP relativ dazu bestimmt, SLAM explizit nur als Ausblick. Beim Start der Referenzpunkt-Vermessung (Phase 2) wurde die Grundsatzfrage nochmal aufgeworfen, aus zwei Gründen: (1) weniger Zeit verfügbar als ursprünglich angenommen (Projektbrief ging von Vollzeit in den Semesterferien aus), (2) Realismus-Argument — ein echter Rover (ERC-Kontext) hätte in einer neuen Umgebung nicht die Möglichkeit, vorher irgendetwas von Hand zu vermessen.
+- Alternativen abgewogen:
+  - (a) **Map-based (ursprünglicher Plan)**: einfachere Algorithmik (Einzelbild-`solvePnP` gegen bekannte Punkte, kein Drift-Problem), aber braucht vorherige Vermessung mehrerer Landmarken — realitätsfern für ein autonomes Rover-Szenario.
+  - (b) **Volles SLAM** (Loop-Closure, Bundle Adjustment, laufender Kartenaufbau): realistischste Abbildung eines echten autonomen Systems, aber der Implementierungsaufwand ist um Größenordnungen höher (vergleichbar mit mehrjährigen Forschungsprojekten wie ORB-SLAM3) — für die verbleibende Zeit nicht machbar.
+  - (c) **Einfache Visuelle Odometrie (VO) ohne Loop-Closure**: zeitliches Feature-Matching zwischen aufeinanderfolgenden Aufnahmen statt gegen eine statische Punktliste, 3D-Relativbewegung wird geschätzt (3D-3D-Punktwolken-Alignment oder `solvePnP` mit 3D-Punkten aus dem Vorframe) und zu einer Trajektorie aufsummiert (`Pose_t = Pose_t-1 · Relativbewegung`). Kein Kartenaufbau, keine Wiedererkennungs-/Korrekturlogik, keine globale Optimierung.
+- Begründung: (c) gewählt. Nutzt fast dieselben Kernbausteine, die ohnehin geplant waren (ORB-Feature-Detektion, Stereo-Triangulation für Tiefe) — neu ist im Wesentlichen nur das zeitliche Matching (statt gegen eine gespeicherte Punktliste) und die Pose-Verkettung. Dadurch entfällt die aufwendige Mehrpunkt-Vermessung des Testraums fast komplett (nur noch ein einziger Startpunkt nötig). Deutlich realistischer für das Rover-Zielszenario als map-based, deutlich machbarer als volles SLAM in der verbleibenden Zeit. Mit etablierten Metriken aus der SLAM-Literatur (ATE/RPE) sauber und wissenschaftlich anschlussfähig evaluierbar.
+- Akzeptierte Einschränkung: ohne Loop-Closure/globale Optimierung akkumulieren kleine Schätzfehler jedes Schritts unkorrigiert über die Strecke (Drift, wächst mit Weglänge/Framezahl). Wird in der Arbeit offen als Limitation behandelt und quantifiziert (ATE/RPE gegen Maßband-Wegpunkte), nicht behoben. Analogie zu echten Mars-Rovern: auch die korrigieren VO-Drift periodisch über externe Referenzen (Orbitalbild-Abgleich, Sonnensensor) — komplett referenzfreie Navigation ist auch dort nicht der Stand der Technik, insofern ist "kein einziger Referenzpunkt" auch für dieses Projekt nicht ganz richtig: ein Startpunkt bleibt nötig.
+- Konsequenzen für Repo/Code:
+  - `data/reference_points.yaml`: Rolle geändert von "Laufzeit-Karte für PnP" zu "Startpunkt-Ursprung (Pflicht) + optionale Ground-Truth-Wegpunkte entlang der Testroute (nur für die Auswertung, nicht vom Algorithmus genutzt)". Format unverändert.
+  - `src/capture`: muss künftig Aufnahme-Sequenzen an unterschiedlichen, sich bewegenden Kamerapositionen unterstützen (Stop-and-Shoot: Kamera bewegen, kurz anhalten, Aufnahme), nicht nur eine Einzelaufnahme mit fix montierter Kamera wie bisher in Tag 1–4 getestet.
+  - `src/localization`: erweitert sich um zeitliches Feature-Matching (Frame_t-1 ↔ Frame_t) und Pose-Verkettungslogik, zusätzlich zur ohnehin geplanten Stereo-3D-Triangulation.
+  - `src/evaluation`: Validierungsmethodik wechselt von "Posefehler gegen Referenzpunkte" zu "Trajektorienfehler über eine gemessene Wegstrecke" (ATE/RPE-artige Metriken).
+  - `CLAUDE.md` und `projektbrief.md` entsprechend aktualisiert (2026-09-04).
+- Offen/zu klären: diese Grundsatzentscheidung weicht vom ursprünglich mit Betreuer-Kontext dokumentierten Projektbrief ab — sollte bei nächster Gelegenheit mit Prof. Borchers-Tigasson kurz rückgespiegelt werden, auch wenn inhaltlich fachlich gut begründbar.
+
 ## 2026-09-04 — Projekt-Prinzip: erst funktionale Pipeline, dann Fine-Tuning
 
 - Kontext: Mehrere offene Tag-4-Punkte (Beleuchtung optimieren, Nahbereichstest, ggf. spätere Fokus-Feinjustage) sind Präzisions-/Vollständigkeits-Aufgaben. Der aktuelle Prototyp-Aufbau (Nagel-Halterung, Sessellehnen-Montage) ist ohnehin nicht auf Endgenauigkeit ausgelegt.
@@ -218,6 +235,40 @@ für die schriftliche Arbeit.
 
 - Kontext: Tag-4-Punkt, mit Lineal/Messschieber nachgemessen statt dem Druck zu vertrauen.
 - Ergebnis: 24mm bestätigt — Sollwert aus dem Druck stimmt mit der Realität überein. Wert für `src/calibration` (Skalierung der 3D-Objektpunkte `objp`) direkt verwendbar.
+
+## 2026-09-07 — 2D-Top-Down-Karte als zusätzlicher Visualisierungs-Output
+
+- Kontext: Beim konzeptionellen Durchgehen der VO-Schritte (siehe
+  Methodenwechsel-Eintrag 2026-09-04) aufgekommene Frage: lässt sich aus den
+  ohnehin berechneten VO-Daten eine einfache 2D-Karte erzeugen?
+- Entscheidung: Ja — als zusätzlicher, rein nachgelagerter
+  Visualisierungs-/Auswertungs-Output. Die (x, z)-Positionen der
+  verketteten Kamera-Posen (Schritt 5 der VO) ergeben direkt einen
+  Top-Down-Pfad; optional werden zusätzlich die triangulierten 3D-Feature-
+  Punkte (Schritt 2) auf die x-z-Ebene projiziert und mit eingezeichnet.
+- Alternativen: (a) keine Kartendarstellung, nur Trajektorien-/Fehlerplots
+  (Zahlenwerte); (b) Karte als Laufzeitkomponente, die zur Pose-Korrektur
+  genutzt wird — verworfen, da das faktisch (Teil-)SLAM mit Kartennutzung
+  wäre und damit gegen die Scope-Abgrenzung in CLAUDE.md verstößt.
+- Begründung: Die Karte wird ausschließlich aus bereits vorliegenden VO-
+  Ergebnissen nachträglich erzeugt, nicht zur Laufzeit von der Lokalisierung
+  genutzt (kein Loop-Closure, kein Bundle Adjustment, keine
+  Neupositionierung anhand der Karte) — bleibt damit innerhalb der in
+  CLAUDE.md festgelegten Abgrenzung ("kein volles SLAM"). Da Fehler
+  unkorrigiert akkumulieren, macht die Karte den Drift zusätzlich
+  anschaulich sichtbar (z.B. eigentlich parallele Wände laufen auseinander)
+  — inhaltlich ein Plus für die Diskussion der Limitation in der Arbeit.
+- Konsequenzen für Repo/Code: Einordnung als Skript in `scripts/`
+  (z.B. `plot_trajectory_map.py`) bzw. `src/evaluation/`, nicht in
+  `src/localization/` — kein Bestandteil des Lokalisierungsalgorithmus.
+
+## 2026-09-07 — RANSAC in estimate_relative_pose_ransac() ergänzt (Ausreißer in 3D-3D-Korrespondenzen)
+
+- Kontext: Beim ersten End-to-End-Test von `vo_pipeline.py` (synthetische Bildsequenz, bekannte Kamerabewegung) wich die geschätzte Pose deutlich von der bekannten Ground Truth ab (5° Rotationsfehler statt ~0°, Y/Z-Translation ungleich Null statt ~0). Diagnose: von 173 zeitlichen 3D-3D-Korrespondenzen waren ~39% Ausreißer. Weitere Diagnose (auf Rückfrage): der Fehler entsteht bereits beim Stereo-Matching (Schritt L↔R) — schon bei einem einzelnen Frame hatten 39 von 256 Stereo-Matches (15%) eine falsche Disparität, trotz korrekt funktionierender Einzelmodule (jede Stufe für sich exakt getestet). Ursache: `match_stereo_pairs()`/`match_temporal_features()` nutzen reinen Deskriptor-Abgleich ohne Kreuzvalidierung gegen die Geometrie über alle Punkte hinweg — bei ähnlich aussehenden Merkmalen (hier: gleichartige synthetische Kreise) sind Fehlzuordnungen normal, nicht nur ein Artefakt der Testszene.
+- Alternativen: (a) einzelne Matching-Stufen mit szenenspezifischen Heuristiken nachbessern, (b) Ausreißer-Robustheit zentral in `pose_estimation.py` (RANSAC) ergänzen, (c) Problem für den PoC-Stand akzeptieren und nur dokumentieren.
+- Begründung: (b) gewählt. Alle vorherigen Fehler (Stereo- und zeitliches Matching) laufen an dieser Stelle zusammen — ein robuster Schätzer hier fängt Fehlzuordnungen unabhängig von ihrer Quelle ab, ohne szenenspezifische Annahmen in den Matching-Stufen. Standardlösung in der VO/SLAM-Literatur. `estimate_relative_pose()` (reiner Kabsch) bleibt als getesteter Kern bestehen; `estimate_relative_pose_ransac()` (neue Funktion) zieht wiederholt zufällige 3-Punkt-Minimalstichproben, zählt Inlier unter einem Distanz-Schwellwert, und verfeinert R,t per Kabsch auf der größten Inlier-Menge. `vo_pipeline.py` nutzt jetzt ausschließlich die RANSAC-Variante.
+- Ergebnis nach der Änderung: derselbe End-to-End-Test (synthetische Sequenz, bekannte laterale Bewegung) liefert Rotationsfehler <0,1° und Translationsfehler im mm-Bereich über mehrere Frames (siehe `scripts/check_vo_pipeline.py`), statt der vorherigen deutlichen Abweichung.
+- Offen/Schwellwert-Begründung: `inlier_threshold` default 2cm ist ein Startwert für den Zielbereich 0,3–2m (siehe CLAUDE.md), noch nicht gegen echte Messungen/Rauschcharakteristik validiert — bei der ersten echten Kalibrier-/VO-Datenaufnahme (Phase 1/2) prüfen und ggf. anpassen. `max_iterations` default 200 gibt bei bis zu ~50% Ausreißeranteil eine sehr hohe Erfolgswahrscheinlichkeit (mind. eine saubere 3-Punkt-Stichprobe), noch nicht gegen echte Ausreißerquoten kalibriert.
 
 ## 2026-09-04 — Nahbereichstest (~0,3m) verschoben
 
