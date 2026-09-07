@@ -90,3 +90,14 @@
 - 🟡 `check_disparity.py` (dichte Disparitätskarte) ist der letzte offene Sanity-Check-Stub aus `CLAUDE.md` — nicht blockierend (die VO-Pipeline nutzt sparse Features, keine dichte Disparität), aber als zusätzliche Anschauungsgrafik für den Bericht noch offen.
 - 🟡 Kein Kalibrier-Orchestrator analog zu `vo_pipeline.py` (der Manifest laden → Ecken erkennen → Intrinsics/Extrinsics/Rektifizierung → Ergebnis speichern in einem Aufruf verkettet) — bisher nur die Einzelbausteine, bewusst so belassen, bis echte Kalibrierbilder vorliegen.
 
+### Update (später am Tag 5): erste echte Kalibrierung + Tiefenmessung
+
+- 🟢 `src/capture/` implementiert (`camera`, `sequence`, `session`, 10 Tests) — behebt den oben offenen Punkt.
+- 🟢 Kalibrier-Orchestrator (`scripts/run_calibration.py`) implementiert — behebt den oben offenen Punkt.
+- 🟢 **Erste echte Kalibrieraufnahmen**: 20 Bildpaare (19 nutzbar), Distanz 0,5–2m, mit horizontaler/vertikaler Kippung und Positionsvariation. Behebt den oben als 🔴 markierten Blocker.
+- 🟢 Kalibrierung auf echten Daten gerechnet: Intrinsics-Reprojection-Error 0,29px, Baseline 61,36mm vs. 60mm Maßband-Referenz (~2,3% Abweichung) — Pipeline funktioniert nachweislich auch auf echten Bildern, nicht nur synthetisch.
+- 🟡 **Tiefenmessung vs. Maßband**: 6,2–7,5% Abweichung bei zwei getesteten Distanzen (0,7m, 1,39m). Ursache nicht abschließend geklärt (Baseline- und Tiefenfehler weichen in unterschiedliche Richtungen ab, passt nicht zu einem einfachen Skalierungsfehler); wahrscheinlichster Kandidat ist die bekannte Wölbung des nur aufgeklebten Schachbretts. Für den aktuellen Prototyp-Stand akzeptiert, Ursachenklärung bewusst auf die Fine-Tuning-Phase gegen Projektende verschoben — kein Blocker für Phase 2. Details in `docs/decisions.md` (2026-09-07).
+- 🟡 Fund unterwegs: `find_checkerboard_corners()` lieferte auf dem Pi (OpenCV 4.10.0) ein anderes Array-Format als auf dem Mac-Dev-System (OpenCV 5.0.0) — gefixt, siehe `docs/decisions.md`. Lehre: Hardware-nahe Module müssen auf der Zielplattform mitgetestet werden.
+- 🟡 RANSAC-Parameter (`inlier_threshold`, `max_iterations`) weiterhin nicht gegen echte Daten validiert — dafür wird jetzt eine echte VO-Bildsequenz gebraucht (noch keine aufgenommen, nur Kalibrierbilder bisher).
+- 🟡 `data/reference_points.yaml` weiterhin leer — weiterhin offen.
+
