@@ -1,0 +1,11 @@
+date: '2026-09-07'
+notiz: Massband 0.70m, frontal, bis Linse gemessen
+calibration_used: results/calibration/2026-09-07_calibration.yaml
+measured_distance_m: 0.7
+computed_depth_mean_m: 0.6569295650295074
+computed_depth_min_m: 0.6454105386564656
+computed_depth_max_m: 0.6692586803273055
+computed_depth_std_mm: 5.889005847224094
+error_mm: -43.07043497049256
+error_pct: -6.152919281498939
+n_corners: 42

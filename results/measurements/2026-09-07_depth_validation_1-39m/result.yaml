@@ -1,0 +1,11 @@
+date: '2026-09-07'
+notiz: Massband 1.39m +-5mm, frontal
+calibration_used: results/calibration/2026-09-07_calibration.yaml
+measured_distance_m: 1.39
+computed_depth_mean_m: 1.2852667578332249
+computed_depth_min_m: 1.2715922010443124
+computed_depth_max_m: 1.2957045281564643
+computed_depth_std_mm: 6.516826344036451
+error_mm: -104.73324216677504
+error_pct: -7.534765623508997
+n_corners: 42
