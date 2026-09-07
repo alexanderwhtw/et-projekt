@@ -62,3 +62,31 @@
 
 **Prinzip ab jetzt (siehe `docs/decisions.md`):** erst eine durchgängig funktionierende Kalibrier-/Lokalisierungs-Pipeline bauen, auch mit bekannten Ungenauigkeiten in Mechanik/Beleuchtung/Fokus. Exaktheit/Fine-Tuning kommt in einer späteren Phase, wenn die Pipeline grundsätzlich steht.
 
+## Methodenwechsel (2026-09-04) — map-based → Visuelle Odometrie ohne Loop-Closure
+
+- 🔴 **Grundsatzentscheidung**: statt vorher vermessener Referenzpunkte (map-based) jetzt einfache Visuelle Odometrie (VO) — Kamerabewegung wird aus zeitlichem Feature-Matching + Stereo-Triangulation geschätzt und zu einer Trajektorie verkettet, verankert an einem Startpunkt. Details/Begründung in `docs/decisions.md`. **Weicht vom ursprünglichen, mit Betreuer-Kontext dokumentierten Projektbrief ab — bei Gelegenheit mit Prof. Borchers-Tigasson rückspiegeln.**
+- 🟢 `CLAUDE.md`, `projektbrief.md`, `data/reference_points.yaml` entsprechend aktualisiert
+- 🟡 `data/reference_points.yaml` befüllen: nur noch EIN Startpunkt-Ursprung nötig (Pflicht), optional ein paar Ground-Truth-Wegpunkte entlang der geplanten Testroute (nur für spätere Auswertung, nicht für den Algorithmus)
+- 🟡 Capture-Konzept (`src/capture`) muss Aufnahme-Sequenzen an mehreren, sich bewegenden Kamerapositionen unterstützen (Stop-and-Shoot), nicht mehr nur eine fixe Einzelaufnahme wie bisher getestet
+
+## Tag 5 (2026-09-07) — Software-Implementierung: VO-Pipeline (Phase 2) + Kalibrier-Pipeline (Phase 1)
+
+### Was funktioniert
+- 🟢 `src/localization/` komplett und verkettet: `features` (ORB) → `stereo_depth` (L/R-Matching + Triangulation) → `temporal_matching` (Frame_t-1↔t, Lowe's Ratio-Test) → `pose_estimation` (Kabsch 3D-3D-Alignment + RANSAC) → `trajectory` (Posen-Verkettung) → `vo_pipeline` (Orchestrator). 30 Tests, jeweils gegen synthetische Ground-Truth-Geometrie mit bekanntem Ergebnis exakt verifiziert.
+- 🟢 `src/calibration/` komplett: `corners` (Eckenerkennung + Objektpunkte) → `intrinsics` (`calibrateCamera` + Pro-Bild-Reprojection-Error) → `extrinsics` (`stereoCalibrate`, exakte Rekonstruktion der real gemessenen 60mm-Baseline in synthetischen Tests) → `rectification` (`stereoRectify`, liefert `P1`/`P2` direkt kompatibel mit `stereo_depth.py`) → `io` (Manifest laden, Kalibrierergebnis als datierte YAML speichern/laden). 20 Tests.
+- 🟢 Gesamt **50/50 Tests grün**, in zwei Commits versioniert (`acdacca`, `3301700`).
+- 🟢 Für jedes Modul ein visuelles Sanity-Check-Skript (`scripts/check_*.py`, u.a. die beiden vorher leeren Stubs `check_calibration.py` und `check_rectification.py` jetzt implementiert) — je mit Beispielbild/-plot geprüft, nicht nur Zahlen.
+- 🟢 End-to-End-Test bestätigt: komplette Kette von synthetischen Stereo-Bildern bis zur fertigen Trajektorie funktioniert zusammen (`scripts/check_vo_pipeline.py`) — <0,1° Rotationsfehler, mm-Bereich Translationsfehler über mehrere Frames.
+- 🟢 Phase 1 und Phase 2 docken sauber aneinander: `P1`/`P2` aus `src/calibration/rectification.py` sind exakt das Format, das `src/localization/stereo_depth.triangulate_matches()` erwartet.
+
+### Kritischer Befund, während der Session gelöst
+- 🔴→🟢 Naive Kleinste-Quadrate-Pose-Schätzung (Kabsch) war anfällig für Ausreißer: beim ersten End-to-End-Test zeigten sich ~15% Fehlzuordnungen bereits beim Stereo-Matching, die sich zu ~39% Ausreißern in den finalen 3D-3D-Korrespondenzen aufsummierten (synthetische Testszene) — verzerrte die geschätzte Pose deutlich (5° statt ~0° Rotationsfehler). Mit RANSAC in `pose_estimation.py` (`estimate_relative_pose_ransac`) behoben, `vo_pipeline.py` nutzt jetzt ausschließlich die robuste Variante. Wichtig für die Arbeit: zeigt, dass Feature-Matching auch bei einfachen synthetischen Szenen nicht fehlerfrei ist — Ausreißer-Robustheit ist kein Nice-to-have, sondern nötig. Details in `docs/decisions.md` (2026-09-07).
+
+### Noch offen
+- 🔴 **Keine echten Kalibrieraufnahmen vorhanden** (`data/calibration_images/` weiterhin leer) — die gesamte Pipeline ist bisher nur an synthetischen Daten mit bekannter Ground Truth verifiziert, noch nicht an einem einzigen echten Kamerabild. Nächster harter Blocker für "erste Tiefenmessung vs. Maßband" (Phase 1 laut CLAUDE.md-Roadmap).
+- 🟡 `src/capture/` (Kamera-I/O, Stop-and-Shoot-Sequenzaufnahme) noch nicht implementiert — ohne das keine echten VO-Sequenzen möglich, weiterhin offen aus dem Methodenwechsel-Eintrag oben.
+- 🟡 `data/reference_points.yaml` weiterhin leer (`points: {}`) — der Pflicht-Startpunkt fehlt, wird für `trajectory.py`s Startpose-Verankerung gebraucht, sobald echte Daten verarbeitet werden.
+- 🟡 RANSAC-Parameter (`inlier_threshold` = 2cm, `max_iterations` = 200) sind begründete Startwerte, noch nicht gegen echtes Kamera-/Messrauschen validiert — bei der ersten echten Datenaufnahme prüfen und ggf. in `docs/decisions.md` nachtragen.
+- 🟡 `check_disparity.py` (dichte Disparitätskarte) ist der letzte offene Sanity-Check-Stub aus `CLAUDE.md` — nicht blockierend (die VO-Pipeline nutzt sparse Features, keine dichte Disparität), aber als zusätzliche Anschauungsgrafik für den Bericht noch offen.
+- 🟡 Kein Kalibrier-Orchestrator analog zu `vo_pipeline.py` (der Manifest laden → Ecken erkennen → Intrinsics/Extrinsics/Rektifizierung → Ergebnis speichern in einem Aufruf verkettet) — bisher nur die Einzelbausteine, bewusst so belassen, bis echte Kalibrierbilder vorliegen.
+
