@@ -1,0 +1,21 @@
+index,distanz_m,notiz,shutter,gain,timestamp
+0,1.0,1m frontal,10000,1.0,2026-09-07T11:27:18
+1,1.0,1m frontal schraeg,10000,1.0,2026-09-07T11:28:00
+2,1.0,1m frontal schraeg andere Seite,10000,1.0,2026-09-07T11:28:36
+3,1.0,1m frontal links im Bild,10000,1.0,2026-09-07T11:29:23
+4,1.0,1m schraeg links,10000,1.0,2026-09-07T11:30:30
+5,1.0,1m schraeg andere Seite,10000,1.0,2026-09-07T11:31:11
+6,1.0,1m rechts im Bild frontal,10000,1.0,2026-09-07T11:31:40
+7,1.0,1m rechts schraeg,10000,1.0,2026-09-07T11:32:43
+8,1.0,1m rechts schraeg andere Seite,10000,1.0,2026-09-07T11:33:37
+9,2.0,2m frontal,10000,1.0,2026-09-07T11:35:00
+10,2.0,2m frontal schraeg,10000,1.0,2026-09-07T11:35:46
+11,2.0,2m schraeg andere Seite,10000,1.0,2026-09-07T11:36:19
+12,2.0,2m links oben im Bild frontal,10000,1.0,2026-09-07T11:36:45
+13,2.0,2m links schraeg,10000,1.0,2026-09-07T11:37:36
+14,2.0,2m rechts schraeg,10000,1.0,2026-09-07T11:38:26
+15,0.5,0.5m frontal oben gekippt,10000,1.0,2026-09-07T11:39:50
+16,0.6,0.6m frontal tiefer,10000,1.0,2026-09-07T11:41:32
+17,0.6,0.6m tiefer schraeg,10000,1.0,2026-09-07T11:42:24
+18,1.0,1m vertikal oben gekippt,10000,1.0,2026-09-07T11:43:08
+19,2.0,2m horizontal schraeg,10000,1.0,2026-09-07T11:44:15
