@@ -29,7 +29,14 @@ def find_checkerboard_corners(image: np.ndarray, pattern_size: tuple[int, int]) 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     found, corners = cv2.findChessboardCornersSB(image, pattern_size, flags=cv2.CALIB_CB_EXHAUSTIVE)
-    return corners if found else None
+    if not found:
+        return None
+
+    # OpenCV-version-dependent: 4.10 (Pi) returns (N,1,2), 5.0 (seen on the
+    # dev Mac) returns (N,2) -- normalize so callers get a consistent shape
+    # regardless of the OpenCV version actually installed.
+    cols, rows = pattern_size
+    return corners.reshape(cols * rows, 2)
 
 
 def generate_object_points(pattern_size: tuple[int, int], square_size: float) -> np.ndarray:
