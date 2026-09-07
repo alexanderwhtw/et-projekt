@@ -274,3 +274,14 @@ für die schriftliche Arbeit.
 
 - Kontext: Tag-4-Punkt, aktueller Prototyp-Aufbau (Sessellehnen-Montage, Nagel-Halterung) lässt sich nicht ohne größeren Umbau für Nahbereich-Aufnahmen anpassen.
 - Entscheidung: Verschoben auf einen späteren Zeitpunkt (nach stabilerer Halterung oder im Rahmen des späteren Fine-Tunings, siehe Projekt-Prinzip oben). Kein Blocker für den funktionalen Kalibrier-Code — Nahbereichsabdeckung ist eine Vollständigkeitsfrage, keine Grundvoraussetzung für eine erste funktionierende Pipeline.
+
+## 2026-09-07 — Erste echte Kalibrierung: 20 Aufnahmen, Baseline-Plausibilitätscheck bestanden
+
+- Kontext: Erste echte Kalibrieraufnahme-Session auf dem Pi (statt bisher nur synthetischer Testdaten). 20 Stereo-Bildpaare mit dem 6×7-Brett, Distanz 0,5–2m, gemischt mit horizontaler/vertikaler Kippung und variierender Position im Bild (siehe `data/calibration_images/manifest.csv`).
+- Nebenbefund (Bugfix, siehe Commit `845dfa0`): beim ersten Testlauf auf dem Pi (OpenCV 4.10.0) schlug `test_corners.py` fehl — `cv2.findChessboardCornersSB` liefert dort `(N,1,2)` statt `(N,2)` wie auf dem Mac-Dev-System (OpenCV 5.0.0). Bisher ausschließlich auf dem Mac getestet, daher unbemerkt. `find_checkerboard_corners()` normalisiert die Form jetzt intern, unabhängig von der OpenCV-Version. Lehre: sobald Hardware-nahe Module entstehen, auf beiden Systemen testen, nicht nur dem Dev-Rechner.
+- Ergebnis (`scripts/run_calibration.py`, `results/calibration/2026-09-07_calibration.yaml`):
+  - 19 von 20 Bildpaaren nutzbar (Bild 15 verworfen: Brett stand zu weit oben, nur ein schmaler Streifen des Musters im Bild — Muster in keiner Hälfte gefunden. Per Live-Feedback im Aufnahme-Skript sofort bemerkt und bei der Distanz/Pose korrigiert, keine nachträgliche Fehlersuche nötig).
+  - Intrinsics-Reprojection-Error: L=0,288px, R=0,293px (sub-pixel, gut).
+  - Extrinsics-Reprojection-Error: 0,707px.
+  - Baseline aus `stereoCalibrate`: **61,36mm** vs. Maßband-Referenz **60mm** (siehe 2026-09-02) → **Abweichung ~2,3%**.
+- Einschätzung: Erster echter End-to-End-Durchlauf der kompletten Kalibrier-Pipeline (bisher nur an synthetischen Daten mit bekannter Ground Truth verifiziert) bestätigt, dass sie auch auf echten Kamerabildern sinnvolle, plausible Ergebnisse liefert — kein Beleg für hohe Präzision (Maßband-Referenz selbst ist PoC-Niveau, siehe CLAUDE.md), aber ein starkes Indiz, dass keine grobe systematische Fehlfunktion vorliegt. Nächster Schritt laut Roadmap: erste Tiefenmessung vs. Maßband (Phase 1, noch offen).
