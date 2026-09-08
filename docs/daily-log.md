@@ -126,3 +126,16 @@ für `data/calibration_images/` festgelegt (`left_NNN.png`/`right_NNN.png`
   Details siehe `docs/decisions.md`.
 - Damit ist Tag 4 inhaltlich abgeschlossen — nächster Schritt: Beginn der
   eigentlichen `src/calibration`-Implementierung (Phase 1).
+
+**Nachtrag, selber Tag — Grundsatz-Methodenwechsel:** Beim Vorbereiten der
+Referenzpunkt-Vermessung wurde der ursprüngliche map-based Ansatz nochmal
+hinterfragt (weniger Zeit als angenommen + Realismus-Argument: ein echter
+Rover kann eine neue Umgebung nicht vorher von Hand vermessen). Ergebnis:
+Wechsel zu einfacher Visueller Odometrie (VO) ohne Loop-Closure — Details,
+Alternativenabwägung und Konsequenzen in `docs/decisions.md`. `CLAUDE.md`,
+`projektbrief.md` und `data/reference_points.yaml` entsprechend
+aktualisiert. Diese Entscheidung weicht vom ursprünglichen, mit
+Betreuer-Kontext dokumentierten Projektbrief ab — sollte bei Gelegenheit
+mit Prof. Borchers-Tigasson rückgespiegelt werden. Referenzpunkt-Aufgabe
+ist dadurch nicht komplett entfallen, sondern kleiner geworden: nur noch
+ein Startpunkt-Ursprung nötig statt mehrerer Landmarken.

@@ -5,7 +5,9 @@ Stand: 2026-08-31
 ## Titel
 Entwicklung und Evaluation eines Vision-Moduls zur markerbasierten
 Selbstlokalisierung eines Kamerasystems — **Update: markerbasiert → merkmalbasiert
-(natürliche Features statt ArUco)**
+(natürliche Features statt ArUco)**. **Update 2026-09-04: map-based →
+einfache Visuelle Odometrie (VO) ohne Loop-Closure**, siehe Methode/Roadmap
+unten.
 
 - Betreuer: Prof. Steffen Borchers-Tigasson, SoSe 2026
 - Kontext: Grundlage für spätere Rover-Navigation, European Rover Challenge
@@ -36,17 +38,33 @@ Teil dieses Projekts, nur die Code-Struktur soll das leicht ermöglichen.
 ## Methode
 Primär: Stereo-Vision, Tiefe über Disparität (StereoSGBM/Block-Matching, OpenCV).
 Feature-Detektion (ORB/SIFT/AKAZE) auf natürlichen Objekten im Testraum.
-Map-based Ansatz: vorher vermessene Referenzpunkte im Testraum, Pose relativ
-dazu bestimmt (kein SLAM zur Laufzeit). Kalibrier-Pattern: klassisches
-Schachbrett (nicht ChArUco).
+
+**Update 2026-09-04**: statt map-based (PnP gegen vorvermessene Referenz-
+punkte) jetzt einfache Visuelle Odometrie (VO) ohne Loop-Closure —
+Kamerabewegung wird durch zeitliches Feature-Matching zwischen aufeinander-
+folgenden Aufnahmen + Stereo-Triangulation geschätzt und zu einer
+Trajektorie aufsummiert, verankert an einem einmalig vermessenen
+Startpunkt. Grund: realistischer für ein Rover-Szenario ohne vorherige
+Umgebungsvermessung (ERC-Analogie: ein echter Rover kann den Zielbereich
+nicht vorher von Hand vermessen), nutzt dieselben Kernbausteine wie der
+ursprüngliche Plan (ORB, Stereo-Triangulation), spart die Mehrpunkt-
+Vermessung. Akzeptierte Einschränkung: unkorrigierte Drift über die
+Strecke (kein Loop-Closure, keine globale Optimierung) — wird in der
+Arbeit mit ATE/RPE-Metriken gemessen und offen diskutiert statt behoben.
+Details/Alternativenabwägung: `docs/decisions.md`.
+
+Kalibrier-Pattern: klassisches Schachbrett (nicht ChArUco).
 
 ## Roadmap
 1. Stereo-Kalibrierung (intrinsisch, extrinsisch, Rektifizierung, erste
    Tiefenvalidierung)
-2. Feature-basierte Lokalisierung (natürliche Features, 3D-Position,
-   Pose relativ zu Referenzpunkten)
-3. Systematische Messreihen, Vergleich gegen Referenz
-4. Ausblick: SLAM/visuelle Odometrie — nur konzeptionell, nicht implementiert
+2. Feature-basierte Visuelle Odometrie (natürliche Features, 3D-Position,
+   zeitliches Matching zwischen Aufnahmen, Pose-Verkettung zu einer
+   Trajektorie, verankert an einem Startpunkt)
+3. Systematische Messreihen, Trajektorien-Fehler (ATE/RPE) gegen
+   Maßband-Ground-Truth-Wegpunkte
+4. Ausblick: volles SLAM (Loop-Closure, Bundle Adjustment) als Erweiterung
+   der implementierten VO — nur konzeptionell, nicht implementiert
 
 ## Projekt-Bereiche (Work Breakdown)
 A. Projektorganisation & Infrastruktur (GitHub, Overleaf, Doku-Log)

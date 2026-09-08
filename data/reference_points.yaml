@@ -1,5 +1,14 @@
-# Vermessene Referenzpunkte im Testraum (Weltkoordinaten in Metern).
-# Wird nach der Vermessung des Testbereichs befüllt (Phase 1/2).
+# Ground-Truth-Punkte im Testraum (Weltkoordinaten in Metern), Ursprung
+# frei wählbar (z.B. eine Bodenecke = [0,0,0]).
+#
+# Rolle seit dem Methodenwechsel zu Visueller Odometrie (siehe
+# docs/decisions.md, 2026-09-04): NICHT mehr als Laufzeit-Karte fuer PnP
+# genutzt. Stattdessen:
+#   - GENAU EIN Punkt als Startpose-Ursprung, an dem die VO-Trajektorie
+#     verankert wird
+#   - optional weitere Punkte entlang der Testroute als Ground-Truth-
+#     Wegpunkte, nur fuer die Auswertung (ATE/RPE-Vergleich Trajektorie
+#     vs. Messschnur), nicht vom Lokalisierungsalgorithmus selbst verwendet
 #
 # Format:
 # points:

@@ -9,9 +9,17 @@ Scope: prototypische Umsetzung / Proof-of-Concept, kein Produktionscode.
 
 Ein Stereo-Kamerasystem bestimmt seine Position + Orientierung in einem
 definierten Testbereich (Innenraum ~10×10m) anhand natürlicher Objekte im
-Raum. Kein ArUco, kein SLAM (nur als Ausblick erwähnt, nicht implementiert).
-Ansatz: **map-based** — vorher vermessene Referenzpunkte im Testraum, Pose
-wird relativ dazu bestimmt.
+Raum. Kein ArUco.
+
+**Ansatz (Update 2026-09-04, siehe `docs/decisions.md`): einfache Visuelle
+Odometrie (VO) ohne Loop-Closure** — statt eines map-based Ansatzes gegen
+vorvermessene Referenzpunkte. Kamerabewegung wird schrittweise aus
+zeitlichem Feature-Matching (Frame_t-1 ↔ Frame_t) + Stereo-Triangulation
+geschätzt und zu einer Trajektorie aufsummiert, verankert an einem einmalig
+vermessenen Startpunkt. Kein Kartenaufbau, keine Wiedererkennungs-/
+Korrekturlogik — volles SLAM (Loop-Closure, Bundle Adjustment) bleibt
+Ausblick, nicht implementiert. Drift über die Strecke ist eine bekannte,
+in der Arbeit offen diskutierte Einschränkung (Metriken: ATE/RPE).
 
 ## Hardware
 
@@ -20,7 +28,9 @@ wird relativ dazu bestimmt.
 - Arducam B0266 Stereo-Kit: 2× OV9281 Global-Shutter, Camarray-HAT, CSI,
   hardware-synchronisiert
 - Jetson Nano (später, Portierung, Modell noch offen)
-- Kamera steht fest während Messung (kein Rolling-Shutter-Problem)
+- Kamera bewegt sich zwischen Aufnahmen (für VO nötig), steht aber während
+  jeder einzelnen Aufnahme still — kein Rolling-Shutter-/Bewegungsunschärfe-
+  Problem pro Frame (Global-Shutter-Sensoren, Stop-and-Shoot statt Video)
 - Zielbereich: 0,3–2m (kleine Baseline des Kits)
 - Ground Truth für Validierung: Maßband (PoC-Niveau reicht, keine
   hochpräzise Referenzmessung nötig)
@@ -31,18 +41,24 @@ wird relativ dazu bestimmt.
   sein, dass ein späterer ROS2-Wrapper leicht möglich ist (klare Trennung
   Logik/I/O). Kein ROS2-Setup, keine ROS2-Nodes jetzt schreiben.
 - Kein ArUco/Marker-basierter Ansatz (weder primär noch als Cross-Validation)
-- Kein SLAM/visuelle Odometrie als Implementierung (nur Konzept im Ausblick)
+- Kein volles SLAM (Loop-Closure, Bundle Adjustment, persistente Karte) —
+  nur einfache Visuelle Odometrie ohne diese Korrekturmechanismen wird
+  implementiert; volles SLAM bleibt Konzept im Ausblick
 
 ## Roadmap / Phasen
 
 1. **Kalibrierung** — intrinsisch (Schachbrett, je Kamera), extrinsisch
    (stereoCalibrate), Rektifizierung, erste Tiefenmessung vs. Maßband
-2. **Lokalisierungsalgorithmus** — Feature-Detektion (ORB/SIFT/AKAZE) auf
-   natürlichen Objekten, 3D-Position via Stereo-Disparität, Pose relativ zu
-   vermessenen Referenzpunkten
-3. **Validierung** — systematische Messreihen, Fehlermetriken (mm, Grad)
-   gegen Referenz
-4. **Ausblick** — SLAM/visuelle Odometrie, nur konzeptionell in der Arbeit
+2. **Lokalisierungsalgorithmus (Visuelle Odometrie)** — Feature-Detektion
+   (ORB/SIFT/AKAZE) auf natürlichen Objekten, 3D-Position via Stereo-
+   Disparität, zeitliches Feature-Matching zwischen aufeinanderfolgenden
+   Aufnahmen, Pose-Verkettung zu einer Trajektorie (kein Loop-Closure),
+   verankert an einem vermessenen Startpunkt
+3. **Validierung** — systematische Messreihen, Trajektorien-Fehlermetriken
+   (ATE/RPE, mm/Grad) gegen Maßband-Ground-Truth-Wegpunkte
+4. **Ausblick** — volles SLAM (Loop-Closure, Bundle Adjustment, persistente
+   Karte) als Erweiterung der implementierten VO, nur konzeptionell in der
+   Arbeit
 
 Aktuelle Phase: **1** (Dev-Workflow-Setup: SSH/VS Code/Claude Code auf dem
 Pi, danach Hardware-Montage + Bring-up)
@@ -62,7 +78,9 @@ et-projekt/
   scripts/          # visuelle Sanity-Check-Skripte (siehe unten)
   data/
     calibration_images/
-    reference_points.yaml   # vermessene Referenzpunkte im Testraum
+    reference_points.yaml   # Startpunkt + optionale Ground-Truth-Wegpunkte
+                             # fuer die Trajektorien-Auswertung (nicht als
+                             # Laufzeit-Karte genutzt, siehe VO-Ansatz oben)
   results/
     calibration/    # Kalibrierergebnisse, versioniert mit Datum
     measurements/   # Messreihen-Ergebnisse

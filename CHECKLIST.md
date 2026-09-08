@@ -67,7 +67,7 @@
 - 🔴 **Grundsatzentscheidung**: statt vorher vermessener Referenzpunkte (map-based) jetzt einfache Visuelle Odometrie (VO) — Kamerabewegung wird aus zeitlichem Feature-Matching + Stereo-Triangulation geschätzt und zu einer Trajektorie verkettet, verankert an einem Startpunkt. Details/Begründung in `docs/decisions.md`. **Weicht vom ursprünglichen, mit Betreuer-Kontext dokumentierten Projektbrief ab — bei Gelegenheit mit Prof. Borchers-Tigasson rückspiegeln.**
 - 🟢 `CLAUDE.md`, `projektbrief.md`, `data/reference_points.yaml` entsprechend aktualisiert
 - 🟡 `data/reference_points.yaml` befüllen: nur noch EIN Startpunkt-Ursprung nötig (Pflicht), optional ein paar Ground-Truth-Wegpunkte entlang der geplanten Testroute (nur für spätere Auswertung, nicht für den Algorithmus)
-- 🟡 Capture-Konzept (`src/capture`) muss Aufnahme-Sequenzen an mehreren, sich bewegenden Kamerapositionen unterstützen (Stop-and-Shoot), nicht mehr nur eine fixe Einzelaufnahme wie bisher getestet
+- 🟢 Capture-Konzept (`src/capture`) muss Aufnahme-Sequenzen an mehreren, sich bewegenden Kamerapositionen unterstützen (Stop-and-Shoot), nicht mehr nur eine fixe Einzelaufnahme wie bisher getestet — erledigt in Tag 5, siehe unten (`session.capture_indexed_pair()` + `sequence.next_free_index()`, resumable/indexed, generisch für Kalibrierung und VO-Sequenzen)
 
 ## Tag 5 (2026-09-07) — Software-Implementierung: VO-Pipeline (Phase 2) + Kalibrier-Pipeline (Phase 1)
 
@@ -83,12 +83,12 @@
 - 🔴→🟢 Naive Kleinste-Quadrate-Pose-Schätzung (Kabsch) war anfällig für Ausreißer: beim ersten End-to-End-Test zeigten sich ~15% Fehlzuordnungen bereits beim Stereo-Matching, die sich zu ~39% Ausreißern in den finalen 3D-3D-Korrespondenzen aufsummierten (synthetische Testszene) — verzerrte die geschätzte Pose deutlich (5° statt ~0° Rotationsfehler). Mit RANSAC in `pose_estimation.py` (`estimate_relative_pose_ransac`) behoben, `vo_pipeline.py` nutzt jetzt ausschließlich die robuste Variante. Wichtig für die Arbeit: zeigt, dass Feature-Matching auch bei einfachen synthetischen Szenen nicht fehlerfrei ist — Ausreißer-Robustheit ist kein Nice-to-have, sondern nötig. Details in `docs/decisions.md` (2026-09-07).
 
 ### Noch offen
-- 🔴 **Keine echten Kalibrieraufnahmen vorhanden** (`data/calibration_images/` weiterhin leer) — die gesamte Pipeline ist bisher nur an synthetischen Daten mit bekannter Ground Truth verifiziert, noch nicht an einem einzigen echten Kamerabild. Nächster harter Blocker für "erste Tiefenmessung vs. Maßband" (Phase 1 laut CLAUDE.md-Roadmap).
-- 🟡 `src/capture/` (Kamera-I/O, Stop-and-Shoot-Sequenzaufnahme) noch nicht implementiert — ohne das keine echten VO-Sequenzen möglich, weiterhin offen aus dem Methodenwechsel-Eintrag oben.
+- 🟢 ~~Keine echten Kalibrieraufnahmen vorhanden~~ (`data/calibration_images/` weiterhin leer) — die gesamte Pipeline ist bisher nur an synthetischen Daten mit bekannter Ground Truth verifiziert, noch nicht an einem einzigen echten Kamerabild. Nächster harter Blocker für "erste Tiefenmessung vs. Maßband" (Phase 1 laut CLAUDE.md-Roadmap). — behoben noch am selben Tag, siehe "Update (später am Tag 5)" unten
+- 🟢 ~~`src/capture/` (Kamera-I/O, Stop-and-Shoot-Sequenzaufnahme) noch nicht implementiert~~ — ohne das keine echten VO-Sequenzen möglich, weiterhin offen aus dem Methodenwechsel-Eintrag oben. — behoben noch am selben Tag, siehe "Update (später am Tag 5)" unten
 - 🟡 `data/reference_points.yaml` weiterhin leer (`points: {}`) — der Pflicht-Startpunkt fehlt, wird für `trajectory.py`s Startpose-Verankerung gebraucht, sobald echte Daten verarbeitet werden.
 - 🟡 RANSAC-Parameter (`inlier_threshold` = 2cm, `max_iterations` = 200) sind begründete Startwerte, noch nicht gegen echtes Kamera-/Messrauschen validiert — bei der ersten echten Datenaufnahme prüfen und ggf. in `docs/decisions.md` nachtragen.
 - 🟡 `check_disparity.py` (dichte Disparitätskarte) ist der letzte offene Sanity-Check-Stub aus `CLAUDE.md` — nicht blockierend (die VO-Pipeline nutzt sparse Features, keine dichte Disparität), aber als zusätzliche Anschauungsgrafik für den Bericht noch offen.
-- 🟡 Kein Kalibrier-Orchestrator analog zu `vo_pipeline.py` (der Manifest laden → Ecken erkennen → Intrinsics/Extrinsics/Rektifizierung → Ergebnis speichern in einem Aufruf verkettet) — bisher nur die Einzelbausteine, bewusst so belassen, bis echte Kalibrierbilder vorliegen.
+- 🟢 ~~Kein Kalibrier-Orchestrator analog zu `vo_pipeline.py`~~ (der Manifest laden → Ecken erkennen → Intrinsics/Extrinsics/Rektifizierung → Ergebnis speichern in einem Aufruf verkettet) — bisher nur die Einzelbausteine, bewusst so belassen, bis echte Kalibrierbilder vorliegen. — behoben noch am selben Tag (`scripts/run_calibration.py`), siehe "Update (später am Tag 5)" unten
 
 ### Update (später am Tag 5): erste echte Kalibrierung + Tiefenmessung
 
