@@ -133,3 +133,14 @@ bisher nur getrennt validiert wurden (siehe Tag 5).
 - 🟢 Ergebnisse in `results/measurements/2026-09-08_vo_sequence_test/`
   abgelegt (`trajectory.yaml`)
 
+### Ausblick: mobiler Wagen mit periodischer Live-VO (finaler Validierungsaufbau)
+
+- 🟡 Idee (User, 2026-09-08): Kamera auf rollende, ggf. 3D-gedruckte
+  Halterung montieren, frei durch den Raum fahren, dabei im 1-2s-Takt
+  automatisch aufnehmen + live auswerten statt nachträglichem Batch-Lauf.
+  Details/Einschätzung in `docs/decisions.md` (2026-09-08). Nicht jetzt
+  umsetzen — erst die heutigen Framing-/Ausrichtungs-Schwachstellen in
+  einer saubereren Stop-and-Shoot-Sequenz adressieren, dann Aufnahme- und
+  Verarbeitungs-Latenz einzeln benchmarken, bevor in Mobilität/Live-Betrieb
+  investiert wird.
+
