@@ -101,3 +101,31 @@
 - 🟡 RANSAC-Parameter (`inlier_threshold`, `max_iterations`) weiterhin nicht gegen echte Daten validiert — dafür wird jetzt eine echte VO-Bildsequenz gebraucht (noch keine aufgenommen, nur Kalibrierbilder bisher).
 - 🟡 `data/reference_points.yaml` weiterhin leer — weiterhin offen.
 
+## Tag 6 (2026-09-08, geplant) — erste echte VO-Sequenz End-to-End
+
+Ziel: die bisher nur an synthetischen Daten geprüfte `vo_pipeline` einmal
+komplett an echten, bewegten Kameraaufnahmen durchspielen — größte
+verbleibende Lücke, da Kalibrierung (Phase 1) und VO-Algorithmus (Phase 2)
+bisher nur getrennt validiert wurden (siehe Tag 5).
+
+- 🟡 Startpunkt im Testraum vermessen (Maßband) und in
+  `data/reference_points.yaml` eintragen (Pflicht-Ursprung für
+  `trajectory.py`s Startpose-Verankerung)
+- 🟡 Kurze Testroute festlegen (z.B. gerade Strecke, mehrere Stopps mit
+  bekanntem Maßband-Abstand) als Ground-Truth-Referenz für den späteren
+  Sanity-Check
+- 🟡 Skript zur VO-Sequenzaufnahme (mehrere Stop-and-Shoot-Positionen,
+  analog zu `scripts/capture_calibration_images.py`, nutzt
+  `src/capture.session.capture_indexed_pair()`) prüfen/anlegen, falls noch
+  nicht vorhanden
+- 🟡 Echte VO-Bildsequenz entlang der Testroute aufnehmen
+- 🟡 `vo_pipeline` auf der echten Sequenz laufen lassen, Trajektorie
+  berechnen
+- 🟡 Ergebnis-Trajektorie gegen Maßband-Ground-Truth grob gegenchecken
+  (Sanity-Check, keine formale ATE/RPE-Auswertung — die ist Phase 3)
+- 🟡 RANSAC-Parameter (`inlier_threshold`, `max_iterations`) anhand der
+  echten Daten prüfen, bei Bedarf anpassen und Begründung in
+  `docs/decisions.md` nachtragen
+- 🟡 Ergebnisse in `results/measurements/` ablegen (datiert, analog zur
+  Tiefenmessung aus Tag 5)
+
