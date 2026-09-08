@@ -13,5 +13,25 @@
 # Format:
 # points:
 #   <id>: [x, y, z]
+#
+# Achsenkonvention: Weltursprung = erste Kameraposition (Frame 0), Achsen
+# folgen der OpenCV-Kamerakonvention (x = nach rechts aus Kamerasicht,
+# y = nach unten, z = in die Szene hinein) -- siehe run_vo_pipeline()
+# (src/localization/vo_pipeline.py), triangulierte Punkte liegen im
+# Koordinatensystem der ersten linken Kamera. Eine Bewegung nach LINKS aus
+# Kamerasicht ist also negatives x.
 
-points: {}
+# Erste echte VO-Testsequenz, 2026-09-08 (siehe
+# data/vo_sequences/2026-09-08_tisch_translation/): reine Lateralbewegung
+# entlang eines Tisches, 20cm-Schritte per Massband, Kamera-Ausrichtung
+# unveraendert. Startpunkt = Frame 0 (Ursprung), restliche Punkte sind
+# Ground-Truth-Wegpunkte fuer den spaeteren Trajektorien-Vergleich, nicht
+# vom Algorithmus selbst genutzt.
+points:
+  start: [0.0, 0.0, 0.0]
+  wp_020cm: [-0.20, 0.0, 0.0]
+  wp_040cm: [-0.40, 0.0, 0.0]
+  wp_060cm: [-0.60, 0.0, 0.0]
+  wp_080cm: [-0.80, 0.0, 0.0]
+  wp_100cm: [-1.00, 0.0, 0.0]
+  wp_120cm: [-1.20, 0.0, 0.0]

@@ -1,0 +1,8 @@
+index,position_cm,notiz,shutter,gain,timestamp
+0,0.0,"Startposition, linkes Tischende, Ursprung",10000,1.0,2026-09-08T10:35:30
+1,20.0,20cm nach links,10000,1.0,2026-09-08T10:37:38
+2,40.0,40cm nach links,10000,1.0,2026-09-08T10:38:35
+3,60.0,60cm nach links,10000,1.0,2026-09-08T10:39:44
+4,80.0,80cm nach links,10000,1.0,2026-09-08T10:47:28
+5,100.0,100cm nach links,10000,1.0,2026-09-08T10:49:27
+6,120.0,"120cm nach links, Tischende",10000,1.0,2026-09-08T10:50:22

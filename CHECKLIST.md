@@ -108,24 +108,28 @@ komplett an echten, bewegten Kameraaufnahmen durchspielen — größte
 verbleibende Lücke, da Kalibrierung (Phase 1) und VO-Algorithmus (Phase 2)
 bisher nur getrennt validiert wurden (siehe Tag 5).
 
-- 🟡 Startpunkt im Testraum vermessen (Maßband) und in
+- 🟢 Startpunkt im Testraum vermessen (Maßband) und in
   `data/reference_points.yaml` eintragen (Pflicht-Ursprung für
-  `trajectory.py`s Startpose-Verankerung)
-- 🟡 Kurze Testroute festlegen (z.B. gerade Strecke, mehrere Stopps mit
-  bekanntem Maßband-Abstand) als Ground-Truth-Referenz für den späteren
-  Sanity-Check
-- 🟡 Skript zur VO-Sequenzaufnahme (mehrere Stop-and-Shoot-Positionen,
-  analog zu `scripts/capture_calibration_images.py`, nutzt
-  `src/capture.session.capture_indexed_pair()`) prüfen/anlegen, falls noch
-  nicht vorhanden
-- 🟡 Echte VO-Bildsequenz entlang der Testroute aufnehmen
-- 🟡 `vo_pipeline` auf der echten Sequenz laufen lassen, Trajektorie
-  berechnen
-- 🟡 Ergebnis-Trajektorie gegen Maßband-Ground-Truth grob gegenchecken
-  (Sanity-Check, keine formale ATE/RPE-Auswertung — die ist Phase 3)
-- 🟡 RANSAC-Parameter (`inlier_threshold`, `max_iterations`) anhand der
-  echten Daten prüfen, bei Bedarf anpassen und Begründung in
-  `docs/decisions.md` nachtragen
-- 🟡 Ergebnisse in `results/measurements/` ablegen (datiert, analog zur
-  Tiefenmessung aus Tag 5)
+  `trajectory.py`s Startpose-Verankerung) — Ursprung + 6 Wegpunkte
+  (20cm-Schritte) eingetragen
+- 🟢 Kurze Testroute festgelegt: reine Lateralbewegung entlang eines
+  ~1,2m-Tisches, 20cm-Schritte, Kamera-Ausrichtung sollte konstant bleiben
+- 🟢 Aufnahme-Skript `scripts/capture_vo_frame.py` angelegt (nicht-
+  interaktive Einzelaufnahme, analog zu `capture_one_calibration_image.py`,
+  ohne Board-Erkennung)
+- 🟢 Echte VO-Bildsequenz aufgenommen: 7 Bildpaare, 0–120cm,
+  `data/vo_sequences/2026-09-08_tisch_translation/`
+- 🟢 `vo_pipeline` auf der echten Sequenz gelaufen (neues
+  `scripts/run_vo_sequence.py`) — erste echte End-to-End-Trajektorie
+  berechnet, siehe `docs/decisions.md` (2026-09-08)
+- 🟢 Ergebnis-Trajektorie gegen Maßband-Ground-Truth gegengecheckt: Frames
+  0–5 (0–100cm) mit moderatem, erwartetem Drift (5,5–23,2cm Fehler),
+  Frame 6 (120cm) ein erklärter Ausreißer (Merkmalsschwund in der Ferne,
+  4 RANSAC-Inlier) — Details in `docs/decisions.md`
+- 🟡 RANSAC-Parameter (`inlier_threshold`, `max_iterations`) unverändert
+  gelassen — der heutige Ausreißer war ein Merkmalsknappheits-, kein
+  Schwellwert-Problem. Validierung an einer Sequenz mit durchgehend
+  ausreichender Merkmalsdichte weiterhin offen.
+- 🟢 Ergebnisse in `results/measurements/2026-09-08_vo_sequence_test/`
+  abgelegt (`trajectory.yaml`)
 
