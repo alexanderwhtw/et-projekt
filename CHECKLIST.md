@@ -144,3 +144,34 @@ bisher nur getrennt validiert wurden (siehe Tag 5).
   Verarbeitungs-Latenz einzeln benchmarken, bevor in Mobilität/Live-Betrieb
   investiert wird.
 
+## Tag 7 (geplant) — zweite VO-Sequenz (sauberes Framing + Rotation), freihändig
+
+Kein fester Tisch-Aufbau verfügbar — Aufnahme freihändig, Ground-Truth
+über Bodenmarkierungen (Klebeband/Kreide) + Maßband statt Tischkante.
+
+- 🟡 Route mit Bodenmarkierungen festlegen und abmessen (Punkte alle
+  ~20-30cm), an jedem Punkt auf texturreiche Objekte (Schrank/Vorhang o.ä.)
+  achten — bewusst gegen den heute gefundenen Merkmalsschwund in der Ferne
+  gegensteuern (siehe `docs/decisions.md`, 2026-09-08)
+- 🟡 Zweite Translations-Sequenz aufnehmen (wiederholt den heutigen Test,
+  diesmal mit stabilerer Kamera-Ausrichtung) — prüfen, ob der Ausreißer bei
+  fortschreitender Distanz dadurch verschwindet oder abgeschwächt wird
+- 🟡 Zusätzliche Sequenz mit Rotation (nicht nur reine Translation wie
+  heute) aufnehmen — nächster Schwierigkeitsgrad, prüft ob Kabsch/RANSAC
+  auch Rotationsanteile korrekt schätzt
+- 🟡 Design-Frage klären, bevor mehrere Sequenzen parallel existieren:
+  `data/reference_points.yaml` ist aktuell ein einzelner globaler
+  Ground-Truth-Satz (nur für die Tisch-Sequenz von heute) — für mehrere
+  Testrouten reicht das Format nicht mehr. Möglicher Ansatz: Ground-Truth
+  pro Sequenz direkt neben den Bildern ablegen (z.B.
+  `data/vo_sequences/<name>/ground_truth.yaml`), `reference_points.yaml`
+  nur noch für den einen Pflicht-Weltursprung nutzen
+- 🟡 (Bonus, falls Zeit) `scripts/plot_trajectory_map.py` — 2D-Top-Down-
+  Visualisierung der Trajektorie (siehe Entscheidung 2026-09-07), nutzt
+  die bereits heute erzeugten Trajektorien-Daten, rein nachgelagerte
+  Abbildung fürs Ergebnis/den Bericht, kein Bestandteil des Algorithmus
+- 🟡 Beide neuen Sequenzen mit `run_vo_sequence.py` auswerten, Ergebnisse
+  in `results/measurements/` ablegen und in `docs/decisions.md`
+  dokumentieren
+  investiert wird.
+
