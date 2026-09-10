@@ -144,7 +144,14 @@ bisher nur getrennt validiert wurden (siehe Tag 5).
   Verarbeitungs-Latenz einzeln benchmarken, bevor in Mobilität/Live-Betrieb
   investiert wird.
 
-## Tag 7 (geplant) — zweite VO-Sequenz (sauberes Framing + Rotation), freihändig
+## Tag 7 (zurückgestellt) — zweite VO-Sequenz (sauberes Framing + Rotation), freihändig
+
+🔴 **Zurückgestellt (2026-09-10)**: User bewertet eine Wiederholungsmessung
+jetzt als unnötig — der Tag-6-Test war grundsätzlich funktional, der
+Ausreißer ist bereits ursachenerklärt. Priorität: erst einen vollständig
+funktionalen Gesamtstand erreichen, Wiederholungs-/Optimierungsmessungen
+erst mit sauberem Aufbau + besserem Testraum. Siehe `docs/decisions.md`
+(2026-09-10). Punkte unten bleiben als Rückstand stehen, nicht verworfen.
 
 Kein fester Tisch-Aufbau verfügbar — Aufnahme freihändig, Ground-Truth
 über Bodenmarkierungen (Klebeband/Kreide) + Maßband statt Tischkante.
@@ -166,12 +173,27 @@ Kein fester Tisch-Aufbau verfügbar — Aufnahme freihändig, Ground-Truth
   pro Sequenz direkt neben den Bildern ablegen (z.B.
   `data/vo_sequences/<name>/ground_truth.yaml`), `reference_points.yaml`
   nur noch für den einen Pflicht-Weltursprung nutzen
-- 🟡 (Bonus, falls Zeit) `scripts/plot_trajectory_map.py` — 2D-Top-Down-
-  Visualisierung der Trajektorie (siehe Entscheidung 2026-09-07), nutzt
-  die bereits heute erzeugten Trajektorien-Daten, rein nachgelagerte
-  Abbildung fürs Ergebnis/den Bericht, kein Bestandteil des Algorithmus
+- 🟢 ~~(Bonus, falls Zeit) `scripts/plot_trajectory_map.py`~~ — vorgezogen
+  auf Tag 8 (2026-09-10), siehe dort
 - 🟡 Beide neuen Sequenzen mit `run_vo_sequence.py` auswerten, Ergebnisse
   in `results/measurements/` ablegen und in `docs/decisions.md`
   dokumentieren
   investiert wird.
+
+## Tag 8 (2026-09-10) — Top-Down-Trajektorienkarte, Entscheidung: Tag 7 zurückgestellt
+
+- 🔴 Entscheidung (User): Wiederholungsmessung (Tag 7) jetzt zurückgestellt
+  zugunsten eines vollständig funktionalen Gesamtstands; Optimierung erst
+  mit sauberem Aufbau/besserem Testraum. Details in `docs/decisions.md`
+  (2026-09-10).
+- 🟢 `scripts/plot_trajectory_map.py` implementiert: lädt eine
+  `trajectory.yaml` (aus `run_vo_sequence.py`) und optional
+  `data/reference_points.yaml`, zeichnet den Top-Down-Pfad (X-Z-Ebene)
+  gegen die Ground-Truth-Wegpunkte. `--exclude-frames` blendet bereits
+  diagnostizierte Ausreißer aus Linie/Achsenskalierung aus, markiert sie
+  aber separat (grau), statt sie stillschweigend zu entfernen.
+- 🟢 Karte für die Tag-6-Sequenz erzeugt:
+  `results/measurements/2026-09-08_vo_sequence_test/trajectory_map.png`
+  (Frame 6 / 120cm als dokumentierter Ausreißer ausgeschlossen) — zeigt
+  den erwarteten moderaten Drift der Frames 0–5 gegen die Maßband-Referenz.
 
