@@ -196,4 +196,35 @@ Kein fester Tisch-Aufbau verfügbar — Aufnahme freihändig, Ground-Truth
   `results/measurements/2026-09-08_vo_sequence_test/trajectory_map.png`
   (Frame 6 / 120cm als dokumentierter Ausreißer ausgeschlossen) — zeigt
   den erwarteten moderaten Drift der Frames 0–5 gegen die Maßband-Referenz.
+- 🔴 Scope-Entscheidung (User, direkt im Anschluss): Live-VO wird doch
+  konkret umgesetzt (bisher nur als Ausblick dokumentiert, siehe Tag 6),
+  inkl. Rotationstest — geplant für morgen, siehe Tag 9. ROS bleibt bei
+  reiner struktureller Vorbereitung (kein Code jetzt), unverändert zu
+  `CLAUDE.md`. Details/Begründung in `docs/decisions.md` (2026-09-10,
+  Update).
+
+## Tag 9 (geplant, 2026-09-11) — Umbau auf Live-VO, inkl. Rotationstest
+
+Ersetzt den zurückgestellten Tag-7-Plan (zweite statische Sequenz) fürs
+Rotations-Thema — wird jetzt direkt im Live-Aufbau mitgeprüft statt in
+einer separaten Stop-and-Shoot-Sequenz. Übergreifendes Ziel laut User:
+Live-Messung fertig, bevor am Wochenende (ca. 2026-09-13) der reale
+Aufbau (3D-Druck, plane Ausrichtung) folgt.
+
+- 🟡 `run_vo_sequence.py`/`vo_pipeline.py` auf "aufnehmen → sofort
+  verarbeiten → Zwischenstand ausgeben" umstellen (Kernbausteine der
+  VO-Kette bleiben unverändert, siehe Ausblick-Einschätzung 2026-09-08)
+- 🟡 Aufnahme-Latenz (`rpicam-still`) separat benchmarken, bevor ein
+  Takt (1-2s) festgelegt wird — bisher nur grobe Indikation (3,9s für
+  7-Frame-Batch inkl. Overhead), siehe `docs/decisions.md` (2026-09-08)
+- 🟡 Bewegungsunschärfe-Frage klären: weicht von der bisherigen
+  Stop-and-Shoot-Begründung in `CLAUDE.md` ab (Kamera bewegt sich
+  zwischen Aufnahmen, steht aber *während* jeder Aufnahme still) — prüfen
+  wie sich das beim tatsächlichen Live-Umbau verhält (siehe offener Punkt
+  in `docs/decisions.md`, 2026-09-10)
+- 🟡 Testroute mit Rotation (nicht nur reine Translation wie Tag 6)
+  aufnehmen/auswerten — prüft ob Kabsch/RANSAC Rotationsanteile korrekt
+  schätzt
+- 🟡 Ergebnis mit `plot_trajectory_map.py` visualisieren und in
+  `results/measurements/` + `docs/decisions.md` dokumentieren
 
