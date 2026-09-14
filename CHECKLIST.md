@@ -228,3 +228,30 @@ Aufbau (3D-Druck, plane Ausrichtung) folgt.
 - 🟡 Ergebnis mit `plot_trajectory_map.py` visualisieren und in
   `results/measurements/` + `docs/decisions.md` dokumentieren
 
+## Tag 10 (2026-09-14) — Neuer Kamera-Aufbau (feste Montage auf Metallschiene), Neukalibrierung geplant
+
+Mechanik-Umbau vom Wochenende (siehe Ausblick in `docs/decisions.md`,
+2026-09-10-Update) umgesetzt, an Stelle des ursprünglich für den
+11.09. geplanten Live-VO-Umbaus (Tag 9 oben bleibt offen, nicht verworfen).
+
+- 🟢 Kameras neu montiert: beide OV9281-Module fest auf einer gemeinsamen
+  Metallschiene verschraubt (vorher nur genagelt), Schiene auf Holzständer
+  mit X-Verstrebung — mechanisch deutlich stabiler als der alte Aufbau.
+  Foto `Aufbau2.HEIC` (lokal beim User, nicht im Git).
+- 🟡 Rechtes Kameramodul sitzt sichtbar leicht schräg (Roll) zur
+  Schienenkante — bewusst nicht mechanisch korrigiert, siehe
+  `docs/decisions.md` (2026-09-14)
+- 🟡 Pi-Repo vor der nächsten Session dort aktualisieren (`git pull`) —
+  Stand dort ist `c1270dc`, 5 Commits hinter dem Mac (`ce8dd5b`)
+- 🟡 Baseline auf der neuen Schiene mit Maßband neu nachmessen —
+  bisheriger Referenzwert 60mm (`MEASURED_BASELINE_M` in
+  `scripts/run_calibration.py`) stammt vom alten, genagelten Aufbau
+- 🟡 Neue Kalibrieraufnahmen mit Schachbrett aufnehmen (analog Tag 5,
+  `scripts/capture_calibration_images.py`), `scripts/run_calibration.py`
+  erneut laufen lassen, Ergebnis unter neuem Datum in
+  `results/calibration/` ablegen (alte `2026-09-07_calibration.yaml`
+  bleibt als Vergleichspunkt erhalten, nicht überschreiben)
+- 🟡 Tiefenmessung vs. Maßband (`scripts/measure_depth.py`) wiederholen,
+  prüfen ob sich die 6–7,5%-Abweichung aus Tag 5 durch den stabileren
+  Aufbau verbessert
+
