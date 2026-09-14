@@ -1,0 +1,11 @@
+date: '2026-09-14'
+notiz: frontal, neuer Mount
+calibration_used: results/calibration/2026-09-14_calibration.yaml
+measured_distance_m: 1.3
+computed_depth_mean_m: 1.1621312611817451
+computed_depth_min_m: 1.150814935215391
+computed_depth_max_m: 1.1720628165445555
+computed_depth_std_mm: 6.269410372070585
+error_mm: -137.8687388182549
+error_pct: -10.605287601404221
+n_corners: 42

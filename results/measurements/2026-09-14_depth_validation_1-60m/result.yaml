@@ -1,0 +1,11 @@
+date: '2026-09-14'
+notiz: frontal, neuer Mount, dritte Distanz zur Konsistenzpruefung
+calibration_used: results/calibration/2026-09-14_calibration.yaml
+measured_distance_m: 1.6
+computed_depth_mean_m: 1.4229726024622478
+computed_depth_min_m: 1.4123752227556747
+computed_depth_max_m: 1.4342618818730806
+computed_depth_std_mm: 5.963954789920518
+error_mm: -177.0273975377523
+error_pct: -11.064212346109521
+n_corners: 42

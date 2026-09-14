@@ -1,0 +1,11 @@
+date: '2026-09-14'
+notiz: frontal, neuer Mount, Zollstock im unteren Bildbereich sichtbar
+calibration_used: results/calibration/2026-09-14_calibration.yaml
+measured_distance_m: 0.8
+computed_depth_mean_m: 0.7166412686934716
+computed_depth_min_m: 0.6935071205234787
+computed_depth_max_m: 0.7394583812162883
+computed_depth_std_mm: 14.970899802322498
+error_mm: -83.35873130652848
+error_pct: -10.419841413316062
+n_corners: 42
