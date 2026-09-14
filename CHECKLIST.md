@@ -272,3 +272,21 @@ Mechanik-Umbau vom Wochenende (siehe Ausblick in `docs/decisions.md`,
   Stuhl-Abhängigkeit) bleibt offen für die Fine-Tuning-Phase — für den
   aktuellen Stand als bekannte, dokumentierte Einschränkung akzeptiert
 
+## Tag 11 (geplant, 2026-09-15) — zweite Translationssequenz mit neuem Mount + Umstellung auf Live-VO
+
+Zwei Ziele für morgen (User, 2026-09-14):
+
+- 🟡 Zweite Translations-Testsequenz aufnehmen, 20cm-Schritte (analog Tag
+  6, `data/vo_sequences/2026-09-08_tisch_translation/`), diesmal mit dem
+  neuen, fest verschraubten Mount — Ergebnis mit `run_vo_sequence.py` +
+  `plot_trajectory_map.py` auswerten und gegen die Tag-6-Trajektorie
+  vergleichen (Drift/Ausreißer besser oder schlechter mit stabilerem
+  Aufbau?)
+- 🟡 Umstellung von Einzelbild-Aufnahme (`capture_one_calibration_image.py`-
+  artiger Stop-and-Shoot-Workflow, ein Kommando pro Frame) auf Live-VO
+  (kontinuierliche Aufnahme + sofortige Verarbeitung mit laufender
+  Trajektorien-Ausgabe) — entspricht dem bereits geplanten, aber noch
+  nicht umgesetzten Tag 9 (siehe oben). Aufnahme-Latenz vorher kurz
+  benchmarken, bevor ein Takt (1-2s) festgelegt wird (siehe
+  `docs/decisions.md`, 2026-09-08)
+
