@@ -241,17 +241,34 @@ Mechanik-Umbau vom Wochenende (siehe Ausblick in `docs/decisions.md`,
 - 🟡 Rechtes Kameramodul sitzt sichtbar leicht schräg (Roll) zur
   Schienenkante — bewusst nicht mechanisch korrigiert, siehe
   `docs/decisions.md` (2026-09-14)
-- 🟡 Pi-Repo vor der nächsten Session dort aktualisieren (`git pull`) —
-  Stand dort ist `c1270dc`, 5 Commits hinter dem Mac (`ce8dd5b`)
-- 🟡 Baseline auf der neuen Schiene mit Maßband neu nachmessen —
-  bisheriger Referenzwert 60mm (`MEASURED_BASELINE_M` in
-  `scripts/run_calibration.py`) stammt vom alten, genagelten Aufbau
-- 🟡 Neue Kalibrieraufnahmen mit Schachbrett aufnehmen (analog Tag 5,
-  `scripts/capture_calibration_images.py`), `scripts/run_calibration.py`
-  erneut laufen lassen, Ergebnis unter neuem Datum in
-  `results/calibration/` ablegen (alte `2026-09-07_calibration.yaml`
-  bleibt als Vergleichspunkt erhalten, nicht überschreiben)
-- 🟡 Tiefenmessung vs. Maßband (`scripts/measure_depth.py`) wiederholen,
-  prüfen ob sich die 6–7,5%-Abweichung aus Tag 5 durch den stabileren
-  Aufbau verbessert
+- 🟢 Pi-Repo aktualisiert (`git pull`), war 5 Commits hinter dem Mac
+- 🟢 Baseline auf der neuen Schiene mit Maßband neu nachgemessen:
+  **60mm** (auf mm genau, unverändert zum alten Referenzwert)
+- 🟢 Alte Kalibrierbilder (Tag 5, altes Mount) nach
+  `data/calibration_images_2026-09-07_old_mount/` archiviert, damit die
+  neue Aufnahme-Session nicht versehentlich mit dem alten Datensatz
+  vermischt wird
+- 🟢 Neue Kalibrieraufnahmen: 12 Bildpaare (nah/weit/links/rechts/
+  geschrägt/oben im Bild), unten im Bild nicht möglich (Board-Montage
+  müsste dafür vom Stuhl abgenommen werden). Zwischen-Check nach 7
+  Bildern zeigte noch 1,905px Extrinsics-Error — nach den restlichen 5
+  Posen auf 0,955px verbessert (alter Datensatz: 0,707px bei 19 Bildern),
+  Intrinsics durchgehend gut (0,22px, vgl. 0,29px alt). Ergebnis:
+  `results/calibration/2026-09-14_calibration.yaml`. Berechnete Baseline
+  62,57mm vs. 60mm Maßband-Referenz (+4,3%, etwas mehr als die +2,3%
+  beim alten Mount)
+- 🟢 Tiefenmessung vs. Maßband bei drei Distanzen (0,8m/1,3m/1,6m,
+  `scripts/measure_depth.py`): **-10,4% / -10,6% / -11,1%** — auffällig
+  konstanter relativer Fehler über eine Distanz-Verdopplung, deutlich
+  größer als beim alten Mount (-6,2%/-7,5%) und straffer/konsistenter als
+  dort. Vorzeichen widerspricht weiterhin der Baseline-Abweichung
+  (Baseline zu groß, Tiefe zu klein) — schließt einen einfachen
+  Quadratgrößen-Skalierungsfehler aus. Wahrscheinlichste Ursache:
+  unzureichende Posen-Abdeckung der Kalibrierbilder (fehlender unterer
+  Bildbereich), nicht Board-Wölbung wie bei Tag 5 vermutet — Details in
+  `docs/decisions.md` (2026-09-14)
+- 🟡 Root-Cause-Klärung (mehr/besser verteilte Kalibrierbilder,
+  insbesondere unterer Bildbereich, ggf. mit geändertem Board-Mount ohne
+  Stuhl-Abhängigkeit) bleibt offen für die Fine-Tuning-Phase — für den
+  aktuellen Stand als bekannte, dokumentierte Einschränkung akzeptiert
 
