@@ -1,0 +1,23 @@
+# Maßband-Ground-Truth-Wegpunkte fuer GENAU DIESE Sequenz (Weltkoordinaten
+# in Metern, Ursprung = erste Kameraposition/Frame 0). Nur fuer die
+# Auswertung (Vergleich mit der berechneten VO-Trajektorie), nicht vom
+# Lokalisierungsalgorithmus selbst genutzt.
+#
+# Achsenkonvention: OpenCV-Kamerakonvention (x = nach rechts aus
+# Kamerasicht, y = nach unten, z = in die Szene hinein) -- siehe
+# run_vo_pipeline() (src/localization/vo_pipeline.py). Bewegung nach LINKS
+# aus Kamerasicht (wie Tag 6) ist negatives x.
+#
+# Zweite Translationssequenz (2026-09-15, neuer fest verschraubter Mount,
+# verbesserte Tisch-Markierungen fuer praezisere Ausrichtung, zusaetzliches
+# Objekt im Bild gegen den bei Tag 6 beobachteten Merkmalsschwund in der
+# Ferne). Reine Lateralbewegung, 20cm-Schritte per Massband, direkt
+# vergleichbar mit data/vo_sequences/2026-09-08_tisch_translation/.
+points:
+  start: [0.0, 0.0, 0.0]
+  wp_020cm: [-0.20, 0.0, 0.0]
+  wp_040cm: [-0.40, 0.0, 0.0]
+  wp_060cm: [-0.60, 0.0, 0.0]
+  wp_080cm: [-0.80, 0.0, 0.0]
+  wp_100cm: [-1.00, 0.0, 0.0]
+  wp_120cm: [-1.20, 0.0, 0.0]

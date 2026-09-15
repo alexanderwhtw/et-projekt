@@ -275,12 +275,17 @@ Mechanik-Umbau vom Wochenende (siehe Ausblick in `docs/decisions.md`,
 
 Zwei Ziele für morgen (User, 2026-09-14):
 
-- 🟡 Zweite Translations-Testsequenz aufnehmen, 20cm-Schritte (analog Tag
-  6, `data/vo_sequences/2026-09-08_tisch_translation/`), diesmal mit dem
-  neuen, fest verschraubten Mount — Ergebnis mit `run_vo_sequence.py` +
-  `plot_trajectory_map.py` auswerten und gegen die Tag-6-Trajektorie
-  vergleichen (Drift/Ausreißer besser oder schlechter mit stabilerem
-  Aufbau?)
+- 🟢 Zweite Translations-Testsequenz aufgenommen, 20cm-Schritte (analog
+  Tag 6, `data/vo_sequences/2026-09-15_tisch_translation/`), neuer Mount
+  + verbesserte Tisch-Markierungen + zusätzliches Objekt gegen den
+  Tag-6-Merkmalsschwund. Ausgewertet mit `run_vo_sequence.py` +
+  `plot_trajectory_map.py`, gegen Tag-6-Trajektorie verglichen: **gemischtes
+  Ergebnis** — der Tag-6-Ausreißer bei 120cm ist behoben (keine
+  Merkmalsknappheit mehr), aber der Drift pro Schritt ist durchgehend
+  ~doppelt so groß wie bei Tag 6 (systematisches Untertreiben der
+  Translation um ~25-35%, evtl. teilweise durch den weiterhin
+  bestehenden ~7-8%-Tiefenfehler erklärt, aber nicht vollständig).
+  Details in `docs/decisions.md` (2026-09-15, Update 3)
 - 🟡 Umstellung von Einzelbild-Aufnahme (`capture_one_calibration_image.py`-
   artiger Stop-and-Shoot-Workflow, ein Kommando pro Frame) auf Live-VO
   (kontinuierliche Aufnahme + sofortige Verarbeitung mit laufender
