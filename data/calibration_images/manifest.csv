@@ -11,3 +11,24 @@ index,distanz_m,notiz,shutter,gain,timestamp
 9,,"rechts, weit, geschraegt",10000,1.0,2026-09-14T10:11:15
 10,,"nah, rechts, geschraegt",10000,1.0,2026-09-14T10:11:57
 11,,"nah, links, geschraegt",10000,1.0,2026-09-14T10:14:02
+12,,"burst automatisch, Pose nicht dokumentiert (Feedback-Ausfall siehe docs/decisions.md 2026-09-15)",10000,1.0,2026-09-15T11:28:23
+13,,"burst automatisch, Pose nicht dokumentiert (Feedback-Ausfall siehe docs/decisions.md 2026-09-15)",10000,1.0,2026-09-15T11:28:35
+14,,"burst automatisch, Pose nicht dokumentiert (Feedback-Ausfall siehe docs/decisions.md 2026-09-15)",10000,1.0,2026-09-15T11:28:48
+15,,"burst automatisch, Pose nicht dokumentiert (Feedback-Ausfall siehe docs/decisions.md 2026-09-15)",10000,1.0,2026-09-15T11:29:00
+16,,"burst automatisch, Pose nicht dokumentiert (Feedback-Ausfall siehe docs/decisions.md 2026-09-15)",10000,1.0,2026-09-15T11:29:12
+17,,manuell,10000,1.0,2026-09-15T11:32:51
+18,,manuell,10000,1.0,2026-09-15T11:33:27
+19,,manuell,10000,1.0,2026-09-15T11:33:59
+20,,manuell,10000,1.0,2026-09-15T11:34:19
+21,,manuell,10000,1.0,2026-09-15T11:34:45
+22,,manuell,10000,1.0,2026-09-15T11:35:16
+23,,manuell,10000,1.0,2026-09-15T11:35:41
+24,,manuell,10000,1.0,2026-09-15T11:36:15
+25,,manuell,10000,1.0,2026-09-15T11:36:39
+26,,manuell,10000,1.0,2026-09-15T11:37:10
+27,,manuell,10000,1.0,2026-09-15T11:37:37
+28,,manuell,10000,1.0,2026-09-15T11:38:20
+29,,manuell,10000,1.0,2026-09-15T11:39:22
+30,,manuell,10000,1.0,2026-09-15T11:39:48
+31,,manuell,10000,1.0,2026-09-15T11:40:41
+32,,manuell,10000,1.0,2026-09-15T11:41:19

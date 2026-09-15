@@ -289,3 +289,35 @@ Zwei Ziele für morgen (User, 2026-09-14):
   benchmarken, bevor ein Takt (1-2s) festgelegt wird (siehe
   `docs/decisions.md`, 2026-09-08)
 
+### Zwischenschritt (ungeplant, aber vorgezogen): Fehlerbetrachtung Tiefenfehler + Neukalibrierung mit mehr Posen
+
+Vor den beiden obigen Zielen ergab sich aus einer Diskussion über den
+konstanten ~10,5%-Tiefenfehler (Tag 10) eine mathematische
+Fehlerbetrachtung, die direkt zu einer konkreten Verbesserung geführt hat
+— siehe `docs/decisions.md` (2026-09-15, zwei Updates) für die volle
+Herleitung.
+
+- 🟢 Fehler mathematisch in Offset- und Skalierungsanteil zerlegt
+  (lineare Ausgleichsrechnung `Fehler(D) = a + k·D` mit den 3
+  Tag-10-Messpunkten): ~90% Skalierungsfehler (−11,6%), nur ~1cm
+  Offset-Anteil — widerlegt die Hypothese, der vom User vermutete
+  Referenzpunkt-Versatz (Zollstock an Kamera-Spitze statt optischem
+  Zentrum, geschätzt 5-7cm) sei der Haupttreiber
+- 🟢 Neukalibrierung mit deutlich mehr Bildern (28 statt 12 nutzbar,
+  freihändig gehaltenes Schachbrett statt Stuhllehnen-Mount, erstmals
+  Nahbereich + unterer Bildbereich abgedeckt) — `results/calibration/2026-09-15_calibration.yaml`
+- 🟡 Aufnahme-Workflow-Lernpunkt: automatischer Burst-Ansatz
+  (`scripts/capture_calibration_burst.py`, alle 10s auslösen) technisch
+  nicht mit Chat-Live-Feedback kombinierbar (Python-Puffer bei
+  Ausgabe-Umleitung in Datei) — auf manuellen "go"-getriggerten Ablauf
+  umgestellt (`capture_one_calibration_image.py`, sofortiges Feedback
+  pro Bild)
+- 🟢 Ergebnis: Baseline-Abweichung fast behoben (+4,3% → −0,5%),
+  Tiefenfehler nur teilweise verbessert (−10,4/−10,6/−11,1% →
+  **−7,0/−7,6/−8,1%** bei 0,8/1,3/1,6m) — zeigt, dass gute
+  Baseline-Schätzung allein nicht für genaue Tiefe ausreicht
+- 🟡 Verbleibender ~7-8%-Tiefenfehler als bekannte Einschränkung für die
+  Fine-Tuning-Phase akzeptiert, keine weitere Kalibrier-Iteration jetzt
+  (User-Entscheidung, passt zum Projektprinzip "erst funktionale
+  Pipeline, dann Fine-Tuning")
+

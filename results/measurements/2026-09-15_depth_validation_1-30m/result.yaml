@@ -1,0 +1,11 @@
+date: '2026-09-15'
+notiz: ''
+calibration_used: results/calibration/2026-09-15_calibration.yaml
+measured_distance_m: 1.3
+computed_depth_mean_m: 1.2018329172308224
+computed_depth_min_m: 1.1836616279976542
+computed_depth_max_m: 1.207206718540448
+computed_depth_std_mm: 4.331054530417577
+error_mm: -98.16708276917763
+error_pct: -7.551314059167509
+n_corners: 42
