@@ -326,3 +326,54 @@ Herleitung.
   (User-Entscheidung, passt zum Projektprinzip "erst funktionale
   Pipeline, dann Fine-Tuning")
 
+
+## Tag 12 (geplant, 2026-09-16) — Rotationstest mit echten Daten + Umstellung auf Live-VO
+
+Reihenfolge bewusst so gewählt (Diskussion 2026-09-15, siehe
+`docs/decisions.md`): Rotation zuerst, weil dafür kein neuer Code nötig
+ist (Kabsch-Pose-Schätzung unterstützt volle Rotation+Translation bereits,
+auf synthetischen Daten mit <0,1° Fehler verifiziert, siehe
+`tests/test_pose_estimation.py::test_estimate_relative_pose_recovers_known_rotation_and_translation`)
+— nur nie an echten Kameradaten getestet, weil beide bisherigen echten
+Sequenzen (Tag 6, Tag 11) bewusst reine Translation mit konstanter
+Kamera-Ausrichtung waren. Live-VO danach, weil es am bewiesenermaßen
+funktionierenden Kern aufbauen soll, nicht an einer noch ungetesteten
+Annahme.
+
+- 🟡 Kurze Sequenz mit bekannter, gemessener Rotation aufnehmen (Kamera an
+  einer Position um einen gemessenen Winkel drehen, plus ggf. Translation),
+  mit `run_vo_sequence.py` auswerten — prüft, ob die Pose-Schätzung auch
+  mit Rotationsanteil auf echten Bildern plausibel bleibt
+- 🟡 Umstellung von Einzelbild-Aufnahme auf Live-VO (kontinuierliche
+  Aufnahme + sofortige Verarbeitung mit laufender Trajektorien-Ausgabe) —
+  entspricht dem seit Tag 9 geplanten, bisher nicht umgesetzten Schritt.
+  Aufnahme-Latenz vorher kurz benchmarken, bevor ein Takt (1-2s)
+  festgelegt wird (siehe `docs/decisions.md`, 2026-09-08)
+- 🟡 Danach Status-Check: Phase 2 (VO-Algorithmus) wäre damit funktional
+  abgeschlossen, Phase 3 (systematische Messreihen, ATE/RPE-Metriken)
+  bleibt aber weiterhin größtenteils offen (`src/evaluation/` bisher nur
+  `__init__.py`) — Projekt ist NICHT "fertig bis auf Optimierung", siehe
+  Diskussion `docs/decisions.md` (2026-09-15)
+
+## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
+
+Aus der Diskussion 2026-09-15 (siehe `docs/decisions.md`): Idee (User) war
+ein automatisierter Optimierungs-Loop, der gegen eine einzelne bekannte
+Sequenz VO-interne Parameter (RANSAC-Schwellwert, ORB-Feature-Anzahl,
+Matching-Ratio, …) durchsucht. Zurückgestellt, mit Gegenvorschlag:
+
+- 🟡 Erst Phase 3 sauber abschließen (ATE/RPE-Metriken in
+  `src/evaluation/`, mehrere echte Messreihen) — eine Parameter-Prüfung
+  gegen eine noch ad-hoc Fehlermetrik ist wenig aussagekräftig
+- 🟡 Dann: begründete Sensitivitätsprüfung (wenige, bewusst gewählte
+  Werte pro Parameter, nicht automatisiert durchsucht) statt Blackbox-
+  Optimierung — passt besser zum Projektprinzip "Nachvollziehbarkeit"
+  (`CLAUDE.md`)
+- 🟡 Über **mindestens zwei** unabhängige Sequenzen validieren (an einer
+  einstellen, an der anderen prüfen), nicht nur eine — sonst Risiko von
+  Überanpassung an eine einzelne Aufnahme/Szene
+- 🟡 Einordnung: der bisher dominante Fehler (Tiefen-Skalierung aus der
+  Kalibrierung, ~7-8%) wird durch VO-interne Parameter (ORB/RANSAC)
+  vermutlich nicht behoben, da diese nur die Punktauswahl/Robustheit
+  beeinflussen, nicht die zugrunde liegenden Tiefenwerte — Erwartungen
+  entsprechend dämpfen
