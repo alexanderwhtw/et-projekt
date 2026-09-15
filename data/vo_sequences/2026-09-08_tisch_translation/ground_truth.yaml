@@ -1,0 +1,24 @@
+# Maßband-Ground-Truth-Wegpunkte fuer GENAU DIESE Sequenz (Weltkoordinaten
+# in Metern, Ursprung = erste Kameraposition/Frame 0). Nur fuer die
+# Auswertung (Vergleich mit der berechneten VO-Trajektorie), nicht vom
+# Lokalisierungsalgorithmus selbst genutzt.
+#
+# Achsenkonvention: OpenCV-Kamerakonvention (x = nach rechts aus
+# Kamerasicht, y = nach unten, z = in die Szene hinein) -- siehe
+# run_vo_pipeline() (src/localization/vo_pipeline.py).
+#
+# Umgezogen aus data/reference_points.yaml (2026-09-15), siehe
+# docs/decisions.md -- Format ist jetzt pro Sequenz statt global, damit
+# mehrere Sequenzen nicht denselben Punktesatz teilen muessen.
+#
+# Reine Lateralbewegung entlang eines ~1,2m-Tisches, 20cm-Schritte per
+# Massband, Kamera-Ausrichtung sollte konstant bleiben. Startpunkt =
+# Frame 0 (Ursprung), restliche Punkte sind Ground-Truth-Wegpunkte.
+points:
+  start: [0.0, 0.0, 0.0]
+  wp_020cm: [-0.20, 0.0, 0.0]
+  wp_040cm: [-0.40, 0.0, 0.0]
+  wp_060cm: [-0.60, 0.0, 0.0]
+  wp_080cm: [-0.80, 0.0, 0.0]
+  wp_100cm: [-1.00, 0.0, 0.0]
+  wp_120cm: [-1.20, 0.0, 0.0]

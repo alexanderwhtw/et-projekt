@@ -166,13 +166,12 @@ Kein fester Tisch-Aufbau verfügbar — Aufnahme freihändig, Ground-Truth
 - 🟡 Zusätzliche Sequenz mit Rotation (nicht nur reine Translation wie
   heute) aufnehmen — nächster Schwierigkeitsgrad, prüft ob Kabsch/RANSAC
   auch Rotationsanteile korrekt schätzt
-- 🟡 Design-Frage klären, bevor mehrere Sequenzen parallel existieren:
-  `data/reference_points.yaml` ist aktuell ein einzelner globaler
-  Ground-Truth-Satz (nur für die Tisch-Sequenz von heute) — für mehrere
-  Testrouten reicht das Format nicht mehr. Möglicher Ansatz: Ground-Truth
-  pro Sequenz direkt neben den Bildern ablegen (z.B.
-  `data/vo_sequences/<name>/ground_truth.yaml`), `reference_points.yaml`
-  nur noch für den einen Pflicht-Weltursprung nutzen
+- 🟢 Design-Frage geklärt (2026-09-15, vor der heutigen zweiten Sequenz):
+  Ground-Truth liegt jetzt pro Sequenz direkt neben den Bildern
+  (`data/vo_sequences/<name>/ground_truth.yaml`), `reference_points.yaml`
+  nur noch für die Achsenkonventions-Doku. Tag-6-Punkte umgezogen,
+  `run_vo_sequence.py`/`plot_trajectory_map.py` angepasst, Tests weiterhin
+  grün. Details in `docs/decisions.md` (2026-09-15).
 - 🟢 ~~(Bonus, falls Zeit) `scripts/plot_trajectory_map.py`~~ — vorgezogen
   auf Tag 8 (2026-09-10), siehe dort
 - 🟡 Beide neuen Sequenzen mit `run_vo_sequence.py` auswerten, Ergebnisse

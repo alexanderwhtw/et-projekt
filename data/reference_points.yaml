@@ -1,18 +1,16 @@
-# Ground-Truth-Punkte im Testraum (Weltkoordinaten in Metern), Ursprung
-# frei wählbar (z.B. eine Bodenecke = [0,0,0]).
+# Globale Konventions-Referenz, NICHT mehr der Ort fuer Sequenz-spezifische
+# Ground-Truth-Wegpunkte (siehe Format-Umstellung 2026-09-15,
+# docs/decisions.md): jede Sequenz unter data/vo_sequences/<name>/ hat
+# jetzt ihre eigene ground_truth.yaml direkt neben den Bildern, weil
+# mehrere Sequenzen unterschiedliche Routen/Frame-Zahlen haben und sich
+# keine gemeinsame, positionsbasierte Punktliste teilen koennen.
 #
 # Rolle seit dem Methodenwechsel zu Visueller Odometrie (siehe
-# docs/decisions.md, 2026-09-04): NICHT mehr als Laufzeit-Karte fuer PnP
-# genutzt. Stattdessen:
-#   - GENAU EIN Punkt als Startpose-Ursprung, an dem die VO-Trajektorie
-#     verankert wird
-#   - optional weitere Punkte entlang der Testroute als Ground-Truth-
-#     Wegpunkte, nur fuer die Auswertung (ATE/RPE-Vergleich Trajektorie
-#     vs. Messschnur), nicht vom Lokalisierungsalgorithmus selbst verwendet
-#
-# Format:
-# points:
-#   <id>: [x, y, z]
+# docs/decisions.md, 2026-09-04): NICHT als Laufzeit-Karte fuer PnP
+# genutzt. Der Startpunkt-Ursprung ist ohnehin per Konvention immer
+# [0, 0, 0] (= erste Kameraposition, Frame 0) und wird von
+# run_vo_pipeline() nicht aus dieser Datei gelesen -- diese Datei
+# dokumentiert die Konvention, speichert aber keine Laufzeitdaten mehr.
 #
 # Achsenkonvention: Weltursprung = erste Kameraposition (Frame 0), Achsen
 # folgen der OpenCV-Kamerakonvention (x = nach rechts aus Kamerasicht,
@@ -20,18 +18,8 @@
 # (src/localization/vo_pipeline.py), triangulierte Punkte liegen im
 # Koordinatensystem der ersten linken Kamera. Eine Bewegung nach LINKS aus
 # Kamerasicht ist also negatives x.
-
-# Erste echte VO-Testsequenz, 2026-09-08 (siehe
-# data/vo_sequences/2026-09-08_tisch_translation/): reine Lateralbewegung
-# entlang eines Tisches, 20cm-Schritte per Massband, Kamera-Ausrichtung
-# unveraendert. Startpunkt = Frame 0 (Ursprung), restliche Punkte sind
-# Ground-Truth-Wegpunkte fuer den spaeteren Trajektorien-Vergleich, nicht
-# vom Algorithmus selbst genutzt.
-points:
-  start: [0.0, 0.0, 0.0]
-  wp_020cm: [-0.20, 0.0, 0.0]
-  wp_040cm: [-0.40, 0.0, 0.0]
-  wp_060cm: [-0.60, 0.0, 0.0]
-  wp_080cm: [-0.80, 0.0, 0.0]
-  wp_100cm: [-1.00, 0.0, 0.0]
-  wp_120cm: [-1.20, 0.0, 0.0]
+#
+# Format je Sequenz (in data/vo_sequences/<name>/ground_truth.yaml):
+# points:
+#   <id>: [x, y, z]
+points: {}

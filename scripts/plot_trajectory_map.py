@@ -1,11 +1,17 @@
 """Visualisiert eine berechnete VO-Trajektorie als 2D-Top-Down-Karte (X-Z-
 Ebene, Y/Hoehe ignoriert) und vergleicht sie optional mit Massband-Ground-
-Truth-Wegpunkten (data/reference_points.yaml).
+Truth-Wegpunkten (<sequence-dir>/ground_truth.yaml, siehe trajectory.yaml).
 
 Rein nachgelagerter Auswertungs-/Visualisierungs-Output auf Basis bereits
 berechneter VO-Ergebnisse -- kein Bestandteil des Lokalisierungsalgorithmus,
 keine Laufzeit-Kartennutzung (siehe docs/decisions.md, 2026-09-07). Nutzt
 direkt die von scripts/run_vo_sequence.py erzeugte trajectory.yaml.
+
+Ground-Truth liegt seit 2026-09-15 pro Sequenz direkt neben den Bildern
+(data/vo_sequences/<name>/ground_truth.yaml), nicht mehr in einer globalen
+data/reference_points.yaml -- der Sequenz-Ordner wird aus dem
+"sequence_dir"-Feld der trajectory.yaml uebernommen. --reference-points
+bleibt als expliziter Override moeglich. Siehe docs/decisions.md.
 
 Einzelne Frames koennen ueber --exclude-frames aus der Darstellung
 ausgeschlossen werden, wenn sie bereits als eigenstaendiger, diagnostizierter
@@ -16,7 +22,7 @@ verstecken, sondern um die sonst gute Trajektorie nicht zu verzerren.
 Nutzung:
     python scripts/plot_trajectory_map.py \
         --trajectory results/measurements/2026-09-08_vo_sequence_test/trajectory.yaml \
-        [--reference-points data/reference_points.yaml] \
+        [--reference-points PATH]  # Default: <sequence-dir aus trajectory.yaml>/ground_truth.yaml
         [--exclude-frames 6] \
         [--output PATH]
 """
@@ -35,13 +41,14 @@ import yaml  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_REFERENCE_POINTS = REPO_ROOT / "data" / "reference_points.yaml"
 
-
-def load_positions(trajectory_path: Path) -> np.ndarray:
+def load_trajectory_data(trajectory_path: Path) -> dict:
     with open(trajectory_path) as f:
-        data = yaml.safe_load(f)
-    return np.array(data["positions"], dtype=float)
+        return yaml.safe_load(f)
+
+
+def load_positions(trajectory_data: dict) -> np.ndarray:
+    return np.array(trajectory_data["positions"], dtype=float)
 
 
 def load_reference_positions(reference_points_path: Path) -> np.ndarray | None:
@@ -56,7 +63,12 @@ def load_reference_positions(reference_points_path: Path) -> np.ndarray | None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--trajectory", type=Path, required=True)
-    parser.add_argument("--reference-points", type=Path, default=DEFAULT_REFERENCE_POINTS)
+    parser.add_argument(
+        "--reference-points",
+        type=Path,
+        default=None,
+        help="Default: <sequence-dir aus trajectory.yaml>/ground_truth.yaml",
+    )
     parser.add_argument(
         "--exclude-frames",
         type=int,
@@ -69,13 +81,20 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=None, help="Standard: neben der Trajektorie-Datei")
     args = parser.parse_args()
 
-    positions = load_positions(args.trajectory)
+    trajectory_data = load_trajectory_data(args.trajectory)
+    positions = load_positions(trajectory_data)
     n = len(positions)
     excluded = sorted(i for i in args.exclude_frames if 0 <= i < n)
     keep = [i for i in range(n) if i not in excluded]
     plotted = positions[keep]
 
-    ref_positions = load_reference_positions(args.reference_points)
+    if args.reference_points is not None:
+        reference_points_path = args.reference_points
+    else:
+        sequence_dir = trajectory_data.get("sequence_dir")
+        reference_points_path = Path(sequence_dir) / "ground_truth.yaml" if sequence_dir else None
+
+    ref_positions = load_reference_positions(reference_points_path) if reference_points_path else None
 
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.plot(plotted[:, 0], plotted[:, 2], "-o", color="tab:blue", markersize=5, label="Geschätzt (VO)")
