@@ -327,7 +327,12 @@ Herleitung.
   Pipeline, dann Fine-Tuning")
 
 
-## Tag 12 (geplant, 2026-09-16) — Rotationstest mit echten Daten + Umstellung auf Live-VO
+## Tag 12 (geplant, 2026-09-17) — Rotationstest mit echten Daten + Umstellung auf Live-VO
+
+🔴 **Verschoben von 2026-09-16 auf 2026-09-17**: kein Pi-Zugriff am
+2026-09-16, beide Punkte unten brauchen die Kamera. Stattdessen an diesem
+Tag `src/evaluation/` (ATE/RPE) implementiert, siehe Zwischenschritt
+unten.
 
 Reihenfolge bewusst so gewählt (Diskussion 2026-09-15, siehe
 `docs/decisions.md`): Rotation zuerst, weil dafür kein neuer Code nötig
@@ -351,9 +356,31 @@ Annahme.
   festgelegt wird (siehe `docs/decisions.md`, 2026-09-08)
 - 🟡 Danach Status-Check: Phase 2 (VO-Algorithmus) wäre damit funktional
   abgeschlossen, Phase 3 (systematische Messreihen, ATE/RPE-Metriken)
-  bleibt aber weiterhin größtenteils offen (`src/evaluation/` bisher nur
-  `__init__.py`) — Projekt ist NICHT "fertig bis auf Optimierung", siehe
-  Diskussion `docs/decisions.md` (2026-09-15)
+  bleibt aber weiterhin größtenteils offen — Projekt ist NICHT "fertig bis
+  auf Optimierung", siehe Diskussion `docs/decisions.md` (2026-09-15)
+
+### Zwischenschritt (2026-09-16, kein Pi-Zugriff): `src/evaluation/` (ATE/RPE) implementiert
+
+Rotationstest + Live-VO-Latenz-Benchmark brauchen beide die Kamera, daher
+auf morgen verschoben (Details siehe unten). Stattdessen den größten
+nicht-Hardware-Blocker für Phase 3 angegangen.
+
+- 🟢 `src/evaluation/metrics.py`: `absolute_trajectory_error()` (ATE),
+  `relative_pose_error()` (RPE, Translation), `rotation_error_deg()`
+  (Baustein für den Rotationstest) — 11 neue Tests, 71/71 Tests grün.
+  Design-Entscheidung (kein Trajektorien-Alignment vor der
+  Fehlerberechnung, bewusst anders als TUM-RGBD-Standard) begründet in
+  `docs/decisions.md` (2026-09-16).
+- 🟢 `scripts/evaluate_trajectory.py` gegen beide echten Sequenzen (Tag 6,
+  Tag 11) gelaufen — erste belastbare ATE/RPE-Zahlen statt nur Prosa-
+  Beschreibung, bestätigen quantitativ den bekannten Ausreißer (Tag 6) und
+  den systematischen Pro-Schritt-Drift (Tag 11). Reports:
+  `results/measurements/2026-09-08_vo_sequence_test/evaluation.yaml`,
+  `results/measurements/2026-09-15_vo_sequence_test/evaluation.yaml`.
+- 🟡 `rotation_error_deg()` noch nicht in `relative_pose_error()`
+  integriert — `trajectory.yaml` speichert aktuell nur Positionen, keine
+  vollen Posen. Vor dem Tag-12-Rotationstest ergänzen, siehe
+  `docs/decisions.md` (2026-09-16).
 
 ## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
 

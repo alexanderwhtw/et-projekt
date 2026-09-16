@@ -139,3 +139,26 @@ Betreuer-Kontext dokumentierten Projektbrief ab — sollte bei Gelegenheit
 mit Prof. Borchers-Tigasson rückgespiegelt werden. Referenzpunkt-Aufgabe
 ist dadurch nicht komplett entfallen, sondern kleiner geworden: nur noch
 ein Startpunkt-Ursprung nötig statt mehrerer Landmarken.
+
+## 2026-09-16 (Tag 12, Teil 1) — Repo-Vorbereitung public + Evaluation-Modul, kein Pi-Zugriff
+
+Kein Zugriff auf den Pi heute — Rotationstest und Live-VO-Umstellung (Tag
+12 laut Plan) brauchen beide die Kamera, verschoben auf morgen
+(2026-09-17, siehe `CHECKLIST.md`).
+
+- **Security-/Privacy-Review vor Public-Release**: komplettes Repo (aktuelle
+  Dateien + volle Git-Historie) auf Credentials/Secrets geprüft — keine
+  gefunden. Zwei Punkte behoben: private LAN-IP aus diesem Log entfernt,
+  Git-Historie umgeschrieben (`git filter-repo`) auf einheitliche
+  GitHub-noreply-Autoren-E-Mail statt privater Adresse/Hostname (Force-Push
+  nach `origin/main`, Pi-Klon muss neu synchronisiert werden). `README.md`
+  neu angelegt (rein textbasiert — die vorhandenen Kamerabilder zeigen alle
+  denselben privaten Testaufbau, bewusst nicht im öffentlichen README
+  verwendet).
+- **`src/evaluation/` (ATE/RPE) implementiert**: größter nicht-Hardware-
+  Blocker für Phase 3 (siehe Update 4, 2026-09-15). `metrics.py` mit ATE,
+  RPE (Translation) und einem Rotationsfehler-Baustein für den morgigen
+  Rotationstest, 11 neue Tests, `scripts/evaluate_trajectory.py` gegen
+  beide echten Sequenzen gelaufen — erste belastbare Zahlen statt nur
+  Prosa-Beschreibung. Details, Design-Entscheidung (kein Trajektorien-
+  Alignment) und Ergebnistabelle in `docs/decisions.md`.

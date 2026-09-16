@@ -444,3 +444,20 @@ für die schriftliche Arbeit.
   3. Passt schlecht zum etablierten Projektprinzip "Nachvollziehbarkeit" (`CLAUDE.md`, explizit zur Vermeidung von "Vibe-Coding"-Risiko): eine Blackbox-Optimierungsschleife ohne dokumentierte Begründung, warum bestimmte Parameterwerte gewählt wurden, passt schlechter zum bisherigen Stil (kleine, begründete Schritte in diesem Log) als eine bewusste Sensitivitätsprüfung.
 - Entscheidung (User): Idee zurückgestellt, nicht verworfen. Vorgemerkt für nach Abschluss von Phase 3, dann als begründete Sensitivitätsprüfung (wenige bewusst gewählte Parameterwerte, nicht automatisiert durchsucht) über mindestens zwei unabhängige Sequenzen statt als automatisierter Optimierungs-Loop gegen eine einzelne Aufnahme. Siehe `CHECKLIST.md`, Abschnitt "Vorgemerkt (nach Phase 3)".
 - Tag 12 (2026-09-16) bleibt wie vorgeschlagen: zuerst Rotationstest mit echten Daten (kein neuer Code nötig, Kabsch-Algorithmus unterstützt bereits volle Rotation+Translation, siehe `tests/test_pose_estimation.py::test_estimate_relative_pose_recovers_known_rotation_and_translation`, auf synthetischen Daten mit <0,1° Fehler verifiziert, aber nie an echten Kameradaten getestet), danach Umstellung auf Live-VO.
+
+## 2026-09-16 — `src/evaluation/` (ATE/RPE) implementiert, kein Pi-Zugriff verfügbar
+
+- Kontext: User ohne Pi-Zugriff an diesem Tag, Tag-12-Punkte (Rotationstest, Live-VO-Latenz-Benchmark) brauchen beide die Kamera und wurden auf morgen verschoben. Stattdessen den in Update 4 (2026-09-15) identifizierten größten nicht-Hardware-Blocker für Phase 3 angegangen: `src/evaluation/` war bis dahin nur `__init__.py`.
+- Implementiert: `src/evaluation/metrics.py` mit `absolute_trajectory_error()` (ATE), `relative_pose_error()` (RPE, Translation), `rotation_error_deg()` (Rotationswinkel-Fehler, Baustein für Tag 12). 11 neue Tests in `tests/test_metrics.py` (bekannte Konstanten-Offsets, bekannte Skalierungsfehler, bekannte 90°-Rotation), alle 71 Tests im Repo weiterhin grün.
+- **Design-Entscheidung: kein Trajektorien-Alignment vor ATE/RPE.** Im TUM-RGBD-Benchmark üblich ist ein Umeyama-/Horn-Alignment (Rotation+Translation+ggf. Skalierung) zwischen geschätzter und Ground-Truth-Trajektorie vor der Fehlerberechnung, um einen beliebigen globalen Versatz/Rotationsoffset auszugleichen, der bei monokularen/nicht verankerten SLAM-Systemen typischerweise vorliegt. Hier explizit weggelassen: die VO-Trajektorie ist an einem vermessenen Startpunkt verankert und nutzt dieselbe Achsenkonvention wie die Ground-Truth-Wegpunkte (siehe `ground_truth.yaml`-Header) -- beide liegen bereits im selben Koordinatensystem. Ein zusätzliches Alignment würde den real vorhandenen Drift (das eigentliche Messziel) künstlich kleinrechnen statt ihn zu zeigen. Passt auch zur bisherigen manuellen Auswertungsmethode in diesem Log (direkter 3D-Abstand, kein Fitting).
+- `scripts/evaluate_trajectory.py` (analog zu `plot_trajectory_map.py`) angelegt, gegen beide vorhandenen echten Sequenzen gelaufen:
+
+  | Metrik | Tag 6 (2026-09-08) | Tag 11 (2026-09-15) |
+  |---|---|---|
+  | ATE RMSE | 2,15m (durch 120cm-Ausreißer dominiert) | 0,23m |
+  | ATE Mean | 0,88m | 0,19m |
+  | RPE RMSE (delta=1) | 2,32m (Ausreißer) | 0,08m |
+  | RPE Mean (delta=1) | 1,00m (Ausreißer) | 0,075m |
+
+  Bestätigt quantitativ, was in Update 3 (2026-09-15) bereits qualitativ beschrieben war: Tag 6 hat den bekannten Merkmalsschwund-Ausreißer bei 120cm (dominiert RMSE/Mean, ohne ihn wäre Tag 6 deutlich niedriger als Tag 11), Tag 11 hat keinen Ausreißer mehr, aber einen konsistenten RPE-Fehler von ~5-10cm pro 20cm-Schritt. Reports abgelegt: `results/measurements/2026-09-08_vo_sequence_test/evaluation.yaml`, `results/measurements/2026-09-15_vo_sequence_test/evaluation.yaml`.
+- Noch offen für spätere Iterationen (nicht heute umgesetzt): `rotation_error_deg()` ist noch nicht in `relative_pose_error()` integriert, weil `trajectory.yaml` aktuell nur Positionen speichert, keine vollen Posen (Rotation geht bei der Serialisierung in `run_vo_sequence.py` verloren). Muss ergänzt werden, sobald der Tag-12-Rotationstest eine RPE-Rotationskomponente braucht.
