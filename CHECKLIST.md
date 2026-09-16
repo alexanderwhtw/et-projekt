@@ -381,6 +381,26 @@ nicht-Hardware-Blocker für Phase 3 angegangen.
   integriert — `trajectory.yaml` speichert aktuell nur Positionen, keine
   vollen Posen. Vor dem Tag-12-Rotationstest ergänzen, siehe
   `docs/decisions.md` (2026-09-16).
+- 🟢 **Live-VO-Umstellung (Code-Teil)**: `src/localization/vo_pipeline.py`
+  hat jetzt `init_vo_step()`/`step_vo_pipeline()` als Kernprimitive (ein
+  Frame rein, eine Pose raus) — genau das, was die Live-Aufnahmeschleife
+  morgen pro Frame aufrufen wird. `run_vo_pipeline()` (Batch) ist jetzt nur
+  noch eine dünne Schleife darüber. `run_vo_sequence.py` nutzt dieselbe
+  Frame-für-Frame-Schleife, Pose wird direkt nach jedem Frame ausgegeben.
+  4 neue Tests (u.a. Batch==Streaming-Regressionstest), 75/75 Tests grün.
+  Details in `docs/decisions.md` (2026-09-16, Teil 2).
+- 🔴 **Nebenbefund**: RANSAC in `run_vo_sequence.py` lief bisher ohne
+  festen Seed — Fehler bei merkmalsarmen Frames (z.B. Tag-6-Frame-6)
+  schwankte zwischen Läufen derselben Sequenz um Faktor 7 (26cm bis
+  195cm). Gefixt: neuer `--seed`-Parameter (Default 0), Seed wird jetzt in
+  `trajectory.yaml` mitgespeichert. Historische Fehlerwerte in
+  `docs/decisions.md` waren dadurch nie exakt reproduzierbar — für die
+  Arbeit: Größenordnung/Tendenz zählt, nicht die exakte Zentimeterzahl bei
+  einzelnen merkmalsarmen Frames. Details in `docs/decisions.md`
+  (2026-09-16, Teil 2).
+- 🟡 Reine I/O-Verdrahtung für die eigentliche Live-Aufnahmeschleife
+  (`camera.capture_frame()` statt Datei-Laden pro Schritt) noch offen —
+  ungetestet ohne Kamera nicht sinnvoll zu schreiben, für morgen (Tag 12).
 
 ## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
 

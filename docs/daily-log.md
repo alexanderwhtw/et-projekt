@@ -162,3 +162,11 @@ Kein Zugriff auf den Pi heute — Rotationstest und Live-VO-Umstellung (Tag
   beide echten Sequenzen gelaufen — erste belastbare Zahlen statt nur
   Prosa-Beschreibung. Details, Design-Entscheidung (kein Trajektorien-
   Alignment) und Ergebnistabelle in `docs/decisions.md`.
+- **Live-VO-Umstellung (Code-Teil) vorbereitet**: `vo_pipeline.py` auf
+  inkrementelle Kernprimitive (`init_vo_step()`/`step_vo_pipeline()`)
+  umgebaut, `run_vo_pipeline()` (Batch) und `run_vo_sequence.py` darauf
+  aufgesetzt — identische Verarbeitungsschleife zu der, die die
+  Live-Aufnahme morgen nutzen wird, nur Kamera statt Datei als Bildquelle
+  fehlt noch. Dabei einen echten Nichtdeterminismus-Bug gefunden und
+  behoben: RANSAC lief ohne festen Seed, Fehler bei merkmalsarmen Frames
+  schwankte zwischen Läufen um Faktor 7. Details in `docs/decisions.md`.
