@@ -7,8 +7,8 @@ Entscheidungen).
 ## 2026-09-01 (Tag 1)
 
 - SSH-Verbindung zum Pi geprüft: `rasp-local` (`raspberrypi.local`)
-  funktioniert, `rasp-lan` (statische IP `192.168.50.2`) aktuell nicht
-  erreichbar (Timeout)
+  funktioniert, `rasp-lan` (statische IP im lokalen Heimnetz, siehe lokale
+  SSH-Config) aktuell nicht erreichbar (Timeout)
 - IPA-Tuning-Problem analysiert und behoben: Arducam-Pivariety-Treiber
   meldet Kameranamen generisch als `arducam-pivariety` statt `ov9281`,
   libcamera fand daher keine Tuning-Datei für AE/AWB. Fix: Symlink

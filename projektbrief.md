@@ -93,7 +93,7 @@ strikt sequenziell, G durchgehend, H optional am Ende.
   (Inhalt an User übergeben, 2026-08-31)
 
 ## Repo & Doku
-- GitHub: https://github.com/Ombutztante/et-projekt (privat), main gepusht
+- GitHub: https://github.com/alexanderwhtw/et-projekt (privat), main gepusht
 - Overleaf: ET-Projekt aufgesetzt
 
 ## Aktueller Stand (2026-08-31)

@@ -135,4 +135,4 @@ Siehe Repo-Struktur oben. Logik und I/O getrennt halten.
 
 ## Repo
 
-https://github.com/Ombutztante/et-projekt (privat)
+https://github.com/alexanderwhtw/et-projekt (privat)
