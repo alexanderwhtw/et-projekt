@@ -1,7 +1,21 @@
 import cv2
 import numpy as np
+import pytest
 
-from src.localization.stereo_depth import match_stereo_pairs, triangulate_matches
+from src.localization.stereo_depth import compute_disparity_map, match_stereo_pairs, triangulate_matches
+
+
+def _make_scene(size: int = 400, seed: int = 42) -> np.ndarray:
+    """Non-repetitive synthetic scene (random circles) -- a checkerboard's
+    periodicity causes matching aliasing, see docs/decisions.md, 2026-09-07."""
+    rng = np.random.default_rng(seed)
+    image = np.full((size, size), 60, dtype=np.uint8)
+    for _ in range(40):
+        center = tuple(int(v) for v in rng.integers(40, size - 40, size=2))
+        radius = int(rng.integers(6, 18))
+        color = int(rng.integers(0, 255))
+        cv2.circle(image, center, radius, color, thickness=-1)
+    return image
 
 
 def _descriptor(seed: int) -> np.ndarray:
@@ -80,3 +94,22 @@ def test_triangulate_matches_empty_input():
     P_L, P_R = _rectified_projection_matrices()
     result = triangulate_matches([], [], [], P_L, P_R)
     assert result.shape == (0, 3)
+
+
+def test_compute_disparity_map_recovers_known_constant_disparity():
+    disparity_px = 20
+    left = _make_scene()
+    right = np.roll(left, -disparity_px, axis=1)  # fronto-parallel plane -> constant disparity everywhere
+
+    disparity = compute_disparity_map(left, right)
+
+    assert disparity.shape == left.shape
+    valid = disparity[~np.isnan(disparity)]
+    assert valid.size > 0.5 * disparity.size  # most of a textured scene should get a match
+    assert abs(np.nanmedian(disparity) - disparity_px) < 1.0
+
+
+def test_compute_disparity_map_rejects_invalid_num_disparities():
+    left = _make_scene()
+    with pytest.raises(ValueError):
+        compute_disparity_map(left, left, num_disparities=50)  # not a multiple of 16

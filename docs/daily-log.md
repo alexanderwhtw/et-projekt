@@ -170,3 +170,9 @@ Kein Zugriff auf den Pi heute — Rotationstest und Live-VO-Umstellung (Tag
   fehlt noch. Dabei einen echten Nichtdeterminismus-Bug gefunden und
   behoben: RANSAC lief ohne festen Seed, Fehler bei merkmalsarmen Frames
   schwankte zwischen Läufen um Faktor 7. Details in `docs/decisions.md`.
+- **`check_disparity.py` implementiert**: letzter offener Sanity-Check-
+  Stub aus `CLAUDE.md`. Neue `compute_disparity_map()`-Funktion
+  (cv2.StereoSGBM) plus Skript, das standardmäßig das jüngste echte
+  rektifizierte Bildpaar aus `results/measurements/` nutzt. Rein
+  illustrativ für die Arbeit (VO nutzt sparse Merkmale, keine dichte
+  Disparität). 77/77 Tests grün.

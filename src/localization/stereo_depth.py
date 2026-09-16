@@ -81,3 +81,48 @@ def triangulate_matches(
 
     points_4d = cv2.triangulatePoints(P_L, P_R, pts_L, pts_R)
     return (points_4d[:3] / points_4d[3]).T
+
+
+def compute_disparity_map(
+    image_L: np.ndarray,
+    image_R: np.ndarray,
+    num_disparities: int = 64,
+    block_size: int = 9,
+) -> np.ndarray:
+    """Dense disparity map via Semi-Global Block Matching (cv2.StereoSGBM).
+
+    Illustrative only -- the VO pipeline uses sparse ORB features + the
+    stereo matching/triangulation above, not this dense map (see
+    scripts/check_disparity.py, docs/decisions.md 2026-09-16: an
+    additional visualization for the written thesis, listed in CLAUDE.md's
+    original sanity-check roadmap, not part of the localization algorithm).
+
+    Args:
+        image_L, image_R: rectified grayscale stereo pair (horizontal
+            epipolar lines).
+        num_disparities: max disparity search range in px, must be a
+            positive multiple of 16 (cv2.StereoSGBM requirement).
+        block_size: matched block size (odd, >=3).
+
+    Returns:
+        (H, W) float32 disparity map in pixels. Pixels with no valid match
+        (e.g. textureless regions) are NaN.
+
+    Raises:
+        ValueError: num_disparities is not a positive multiple of 16.
+    """
+    if num_disparities <= 0 or num_disparities % 16 != 0:
+        raise ValueError(f"num_disparities must be a positive multiple of 16, got {num_disparities}")
+
+    matcher = cv2.StereoSGBM_create(
+        minDisparity=0,
+        numDisparities=num_disparities,
+        blockSize=block_size,
+        P1=8 * block_size**2,
+        P2=32 * block_size**2,
+    )
+    # cv2 returns a 16x fixed-point int16 map; negative values mark
+    # no-match/invalid pixels (see cv2.StereoSGBM docs)
+    raw = matcher.compute(image_L, image_R).astype(np.float32) / 16.0
+    raw[raw < 0] = np.nan
+    return raw

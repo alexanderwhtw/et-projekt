@@ -401,6 +401,13 @@ nicht-Hardware-Blocker für Phase 3 angegangen.
 - 🟡 Reine I/O-Verdrahtung für die eigentliche Live-Aufnahmeschleife
   (`camera.capture_frame()` statt Datei-Laden pro Schritt) noch offen —
   ungetestet ohne Kamera nicht sinnvoll zu schreiben, für morgen (Tag 12).
+- 🟢 **`check_disparity.py` implementiert** (letzter offener Sanity-Check-
+  Stub aus `CLAUDE.md`, seit Tag 5 nur `NotImplementedError`): neue
+  `compute_disparity_map()` in `stereo_depth.py` (cv2.StereoSGBM) + 2
+  Tests, Skript nutzt standardmäßig das jüngste echte rektifizierte
+  Bildpaar aus `results/measurements/`. Rein illustrativ für die Arbeit,
+  nicht Teil der VO-Pipeline. 77/77 Tests grün. Details in
+  `docs/decisions.md` (2026-09-16, Teil 3).
 
 ## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
 
