@@ -362,15 +362,23 @@ Annahme.
   erwarteten Wertebereich, ist aber bei größeren Pro-Schritt-Winkeländerungen
   anfälliger für Ausreißer -- noch nicht isoliert (keine
   Merkmalszahl-Diagnose pro Frame durchgeführt), möglicher Punkt für Phase 3.
-- 🟡 Umstellung von Einzelbild-Aufnahme auf Live-VO (kontinuierliche
-  Aufnahme + sofortige Verarbeitung mit laufender Trajektorien-Ausgabe) —
-  entspricht dem seit Tag 9 geplanten, bisher nicht umgesetzten Schritt.
-  Aufnahme-Latenz vorher kurz benchmarken, bevor ein Takt (1-2s)
-  festgelegt wird (siehe `docs/decisions.md`, 2026-09-08)
-- 🟡 Danach Status-Check: Phase 2 (VO-Algorithmus) wäre damit funktional
-  abgeschlossen, Phase 3 (systematische Messreihen, ATE/RPE-Metriken)
-  bleibt aber weiterhin größtenteils offen — Projekt ist NICHT "fertig bis
-  auf Optimierung", siehe Diskussion `docs/decisions.md` (2026-09-15)
+- 🟢 **Umstellung von Einzelbild-Aufnahme auf Live-VO** (2026-09-17):
+  `scripts/run_vo_live.py` verdrahtet `camera.capture_frame()` +
+  `capture_indexed_pair()` direkt mit `init_vo_step()`/`step_vo_pipeline()`
+  -- kontinuierliche Aufnahme + sofortige Verarbeitung mit laufender
+  Trajektorien-Ausgabe, entspricht dem seit Tag 9 geplanten Schritt.
+  **Latenz-Benchmark**: Aufnahme ~1,4-1,6s, VO-Verarbeitung pro Frame nur
+  ~0,24s -- Aufnahme dominiert. Entscheidung dagegen, einen festen 1-2s-
+  Takt zu erzwingen: solange kein motorisierter Wagen existiert, bewegt ein
+  Mensch die Kamera von Hand, daher standardmäßig interaktiv (Enter-Taste),
+  `--interval` optional für einen späteren automatischen Aufbau vorbereitet.
+  Erster echter Live-Test (5 Frames) lief fehlerfrei durch. Details in
+  `docs/decisions.md` (2026-09-17, Teil 3).
+- 🟢 **Status-Check**: Phase 2 (VO-Algorithmus, inkl. Rotation und
+  Live-Betrieb) ist damit funktional abgeschlossen. Phase 3 (systematische
+  Messreihen, ATE/RPE über mehrere Sequenzen, Validierung) bleibt der
+  nächste große offene Block — Projekt ist NICHT "fertig bis auf
+  Optimierung", siehe Diskussion `docs/decisions.md` (2026-09-15).
 
 ### Zwischenschritt (2026-09-16, kein Pi-Zugriff): `src/evaluation/` (ATE/RPE) implementiert
 
