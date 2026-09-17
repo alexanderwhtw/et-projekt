@@ -114,8 +114,8 @@ def main() -> None:
     # nicht erst am Ende der ganzen Sequenz.
     print("\nGeschaetzte Trajektorie (x, y, z) in Metern, Ursprung = Frame 0:")
     pose, points, descriptors = init_vo_step(*load_rectified(entries[0]), P_L, P_R)
-    positions = [pose[:3, 3]]
-    print(f"  Frame 0: [{positions[0][0]:+.4f}, {positions[0][1]:+.4f}, {positions[0][2]:+.4f}]")
+    poses = [pose]
+    print(f"  Frame 0: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
 
     for frame_index, entry in enumerate(entries[1:], start=1):
         image_L, image_R = load_rectified(entry)
@@ -125,11 +125,11 @@ def main() -> None:
             )
         except RuntimeError as e:
             raise RuntimeError(f"frame {frame_index}: {e}") from e
-        pos = pose[:3, 3]
-        positions.append(pos)
-        print(f"  Frame {frame_index}: [{pos[0]:+.4f}, {pos[1]:+.4f}, {pos[2]:+.4f}]")
+        poses.append(pose)
+        print(f"  Frame {frame_index}: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
 
-    positions = np.array(positions)
+    positions = np.array([pose[:3, 3] for pose in poses])
+    rotations = np.array([pose[:3, :3] for pose in poses])
 
     if reference_points_path.exists():
         ref_data = yaml.safe_load(open(reference_points_path))
@@ -163,6 +163,7 @@ def main() -> None:
                 "calibration": str(args.calibration),
                 "seed": args.seed,
                 "positions": [p.tolist() for p in positions],
+                "rotations": [r.tolist() for r in rotations],
             },
             f,
             default_flow_style=None,

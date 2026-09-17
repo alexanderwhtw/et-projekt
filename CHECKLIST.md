@@ -377,10 +377,20 @@ nicht-Hardware-Blocker für Phase 3 angegangen.
   den systematischen Pro-Schritt-Drift (Tag 11). Reports:
   `results/measurements/2026-09-08_vo_sequence_test/evaluation.yaml`,
   `results/measurements/2026-09-15_vo_sequence_test/evaluation.yaml`.
-- 🟡 `rotation_error_deg()` noch nicht in `relative_pose_error()`
-  integriert — `trajectory.yaml` speichert aktuell nur Positionen, keine
-  vollen Posen. Vor dem Tag-12-Rotationstest ergänzen, siehe
-  `docs/decisions.md` (2026-09-16).
+- 🟢 **Rotation in Metriken + `trajectory.yaml` ergänzt** (2026-09-17,
+  Vorbereitung Tag 12 vor dem eigentlichen Rotationstest): neue
+  `relative_rotation_error()` in `src/evaluation/metrics.py` (Rotations-
+  Pendant zu `relative_pose_error()`, nutzt `rotation_error_deg()` intern)
+  statt Erweiterung von `relative_pose_error()` selbst — bewusste
+  Entscheidung, siehe `docs/decisions.md` (2026-09-17). `run_vo_sequence.py`
+  speichert jetzt zusätzlich `rotations` (3x3-Matrizen je Frame) in
+  `trajectory.yaml`, `positions` bleibt unverändert (Rückwärtskompatibilität
+  zu `plot_trajectory_map.py`/`evaluate_trajectory.py`). 5 neue Tests,
+  82/82 Tests grün. **Noch offen**: `evaluate_trajectory.py` nutzt
+  `relative_rotation_error()` noch nicht — Ground-Truth-Format für Rotation
+  (`ground_truth.yaml`) ist noch nicht definiert, bewusst zurückgestellt bis
+  die echte Rotationssequenz aufgenommen wird (siehe unten), um das Format
+  nicht ohne echte Daten zu raten.
 - 🟢 **Live-VO-Umstellung (Code-Teil)**: `src/localization/vo_pipeline.py`
   hat jetzt `init_vo_step()`/`step_vo_pipeline()` als Kernprimitive (ein
   Frame rein, eine Pose raus) — genau das, was die Live-Aufnahmeschleife
@@ -408,6 +418,16 @@ nicht-Hardware-Blocker für Phase 3 angegangen.
   Bildpaar aus `results/measurements/`. Rein illustrativ für die Arbeit,
   nicht Teil der VO-Pipeline. 77/77 Tests grün. Details in
   `docs/decisions.md` (2026-09-16, Teil 3).
+- 🔴 **Nebenbefund (2026-09-17)**: Pi-Klon war von `origin/main` komplett
+  divergiert (36 vs. 41 Commits) — Ursache: der Public-Release-Rewrite
+  (`4c013b4`, private IP anonymisiert) hat die Commit-Historie ab diesem
+  Punkt umgeschrieben (neue Hashes), der Pi hatte den Rewrite nie gepullt
+  und lief auf der alten, unbereinigten Historie weiter. Gefixt: Pi-Klon
+  war sauber (keine uncommitteten Änderungen), daher per `git reset --hard
+  origin/main` auf die bereinigte Historie zurückgesetzt. Für die Zukunft:
+  nach jedem History-Rewrite auf dem Mac-Repo den Pi-Klon explizit
+  synchronisieren, nicht nur `git pull` verlassen (schlägt bei Divergenz
+  fehl statt sich stillschweigend zu reparieren).
 
 ## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
 

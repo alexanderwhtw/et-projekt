@@ -2,7 +2,12 @@ import cv2
 import numpy as np
 import pytest
 
-from src.evaluation.metrics import absolute_trajectory_error, relative_pose_error, rotation_error_deg
+from src.evaluation.metrics import (
+    absolute_trajectory_error,
+    relative_pose_error,
+    relative_rotation_error,
+    rotation_error_deg,
+)
 
 
 def test_ate_zero_for_identical_trajectories():
@@ -98,3 +103,53 @@ def test_rotation_error_is_symmetric():
     R_b, _ = cv2.Rodrigues(np.array([0.0, np.radians(25.0), 0.0]))
 
     assert rotation_error_deg(R_a, R_b) == pytest.approx(rotation_error_deg(R_b, R_a), abs=1e-9)
+
+
+def _yaw_sequence(angles_deg: list[float]) -> np.ndarray:
+    return np.array([cv2.Rodrigues(np.array([0.0, 0.0, np.radians(a)]))[0] for a in angles_deg])
+
+
+def test_relative_rotation_error_zero_for_identical_rotations():
+    rotations = _yaw_sequence([0.0, 30.0, 60.0])
+
+    result = relative_rotation_error(rotations, rotations)
+
+    np.testing.assert_allclose(result["per_step"], [0, 0], atol=1e-6)
+    assert result["rmse"] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_relative_rotation_error_ignores_constant_absolute_offset():
+    # estimated is ground truth rotated by a constant extra 45 deg yaw at
+    # every frame -- a global orientation misalignment that must not show up
+    # here, since RPE compares relative (frame-to-frame) rotation only, same
+    # principle as the translation RPE's constant-offset test above
+    ground_truth = _yaw_sequence([0.0, 30.0, 60.0])
+    R_offset, _ = cv2.Rodrigues(np.array([0.0, 0.0, np.radians(45.0)]))
+    estimated = np.array([R_offset @ R for R in ground_truth])
+
+    result = relative_rotation_error(estimated, ground_truth)
+
+    np.testing.assert_allclose(result["per_step"], [0, 0], atol=1e-6)
+
+
+def test_relative_rotation_error_detects_known_step_error():
+    # ground truth steps 30deg/step, estimated steps 25deg/step -> 5deg
+    # per-step rotation error, known-constant case analogous to the
+    # translation RPE's systematic-scale-error test above
+    ground_truth = _yaw_sequence([0.0, 30.0, 60.0])
+    estimated = _yaw_sequence([0.0, 25.0, 50.0])
+
+    result = relative_rotation_error(estimated, ground_truth)
+
+    np.testing.assert_allclose(result["per_step"], [5.0, 5.0], atol=1e-6)
+    assert result["rmse"] == pytest.approx(5.0, abs=1e-6)
+
+
+def test_relative_rotation_error_rejects_length_mismatch():
+    with pytest.raises(ValueError):
+        relative_rotation_error(np.zeros((2, 3, 3)), np.zeros((3, 3, 3)))
+
+
+def test_relative_rotation_error_rejects_too_few_frames_for_delta():
+    with pytest.raises(ValueError):
+        relative_rotation_error(np.zeros((2, 3, 3)), np.zeros((2, 3, 3)), delta=2)
