@@ -345,10 +345,23 @@ Kamera-Ausrichtung waren. Live-VO danach, weil es am bewiesenermaßen
 funktionierenden Kern aufbauen soll, nicht an einer noch ungetesteten
 Annahme.
 
-- 🟡 Kurze Sequenz mit bekannter, gemessener Rotation aufnehmen (Kamera an
-  einer Position um einen gemessenen Winkel drehen, plus ggf. Translation),
-  mit `run_vo_sequence.py` auswerten — prüft, ob die Pose-Schätzung auch
-  mit Rotationsanteil auf echten Bildern plausibel bleibt
+- 🟢 **Kurze Sequenz mit bekannter, gemessener Rotation aufgenommen und
+  ausgewertet** (2026-09-17): 7 Frames, reine Drehung an fixem Punkt,
+  Geodreieck-Winkelmarkierungen auf Papier, 15°-Schritte 0°-90°
+  (`data/vo_sequences/2026-09-17_rotation/`). Achsenkonvention für
+  `ground_truth.yaml`s neues `rotations_deg`-Feld empirisch aus der ersten
+  VO-Schätzung bestimmt (Rotationsachse konsistent Kamera-y, negative
+  Richtung), nicht angenommen. `evaluate_trajectory.py` gibt jetzt zusätzlich
+  eine Rotations-RPE aus. **Ergebnis**: erste 4 Schritte (0°-60°) mit
+  1,6-3,4° Fehler plausibel, letzte 2 Schritte (60°-90°) mit 9,4°/14,6°
+  Fehler und deutlichem Positions-Sprung im `trajectory_map.png` -- Muster
+  passt zu einem Merkmalsschwund-/Fehlmatching-Ausreißer bei größerem
+  Blickwinkelversatz, analog zum bekannten Tag-6-120cm-Fall, hier erstmals
+  für Rotation gezeigt. Details + Ergebniszahlen in `docs/decisions.md`
+  (2026-09-17, Teil 2). **Bestätigt**: Pose-Schätzung schätzt Rotation im
+  erwarteten Wertebereich, ist aber bei größeren Pro-Schritt-Winkeländerungen
+  anfälliger für Ausreißer -- noch nicht isoliert (keine
+  Merkmalszahl-Diagnose pro Frame durchgeführt), möglicher Punkt für Phase 3.
 - 🟡 Umstellung von Einzelbild-Aufnahme auf Live-VO (kontinuierliche
   Aufnahme + sofortige Verarbeitung mit laufender Trajektorien-Ausgabe) —
   entspricht dem seit Tag 9 geplanten, bisher nicht umgesetzten Schritt.

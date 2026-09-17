@@ -1,0 +1,37 @@
+# Geodreieck-Ground-Truth-Wegpunkte fuer GENAU DIESE Sequenz (Weltkoordinaten
+# in Metern, Ursprung = erste Kameraposition/Frame 0). Nur fuer die
+# Auswertung (Vergleich mit der berechneten VO-Trajektorie), nicht vom
+# Lokalisierungsalgorithmus selbst genutzt.
+#
+# Achsenkonvention: OpenCV-Kamerakonvention (x = nach rechts aus
+# Kamerasicht, y = nach unten, z = in die Szene hinein) -- siehe
+# run_vo_pipeline() (src/localization/vo_pipeline.py).
+#
+# Erste Rotationssequenz (2026-09-17): reine Drehung an einer fixen Position
+# (kein Translationsanteil, Kamera stand auf einer Papier-Markierung und
+# wurde nur gedreht) -- points bleiben daher ueberall [0,0,0]. Winkel per
+# Geodreieck gemessen, 15-Grad-Schritte, 0-90 Grad, siehe manifest.csv.
+#
+# rotations_deg: kumulierter Drehwinkel gegenueber Frame 0, um die Kamera-
+# y-Achse (nach unten), NEGATIVE Richtung -- empirisch aus der ersten
+# VO-Schaetzung auf dieser Sequenz bestimmt (Rotationsachse konsistent
+# [~0, -1, ~0] ueber alle Frames, siehe docs/decisions.md, 2026-09-17),
+# nicht durch a-priori-Konvention festgelegt, da die physische Drehrichtung
+# (links/rechts aus Kamerasicht) beim Aufbau nicht separat vermerkt wurde.
+# Rotationsmatrix je Wegpunkt: cv2.Rodrigues([0, -radians(rotations_deg), 0]).
+points:
+  deg_000: [0.0, 0.0, 0.0]
+  deg_015: [0.0, 0.0, 0.0]
+  deg_030: [0.0, 0.0, 0.0]
+  deg_045: [0.0, 0.0, 0.0]
+  deg_060: [0.0, 0.0, 0.0]
+  deg_075: [0.0, 0.0, 0.0]
+  deg_090: [0.0, 0.0, 0.0]
+rotations_deg:
+  deg_000: 0
+  deg_015: 15
+  deg_030: 30
+  deg_045: 45
+  deg_060: 60
+  deg_075: 75
+  deg_090: 90
