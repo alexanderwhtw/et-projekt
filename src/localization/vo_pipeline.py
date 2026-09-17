@@ -136,10 +136,12 @@ def step_vo_pipeline(
 
     Raises:
         RuntimeError: fewer than min_temporal_matches valid temporal
-            correspondences to the previous frame -- the pipeline stops
-            rather than silently produce an unreliable pose (no
-            loop-closure/correction exists to fix it later, see
-            docs/decisions.md, 2026-09-04).
+            correspondences to the previous frame, or RANSAC couldn't find
+            a rigid pose with at least 3 inliers among the matches (see
+            estimate_relative_pose_ransac()) -- the pipeline stops rather
+            than silently produce an unreliable pose (no loop-closure/
+            correction exists to fix it later, see docs/decisions.md,
+            2026-09-04).
     """
     points_curr, descriptors_curr = extract_frame_points(image_L, image_R, P_L, P_R, n_features, max_y_diff)
 

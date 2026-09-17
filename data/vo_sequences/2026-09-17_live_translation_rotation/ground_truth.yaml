@@ -1,0 +1,37 @@
+# Maßband+Geodreieck-Ground-Truth-Wegpunkte fuer GENAU DIESE Sequenz
+# (Weltkoordinaten in Metern, Ursprung = erste Kameraposition/Frame 0). Nur
+# fuer die Auswertung (Vergleich mit der berechneten VO-Trajektorie), nicht
+# vom Lokalisierungsalgorithmus selbst genutzt.
+#
+# Achsenkonvention: OpenCV-Kamerakonvention (x = nach rechts aus
+# Kamerasicht, y = nach unten, z = in die Szene hinein) -- siehe
+# run_vo_pipeline() (src/localization/vo_pipeline.py). Bewegung nach LINKS
+# aus Kamerasicht (wie Tag 6/11) ist negatives x.
+#
+# Erste kombinierte Live-Sequenz (2026-09-17): gleichzeitige Translation
+# UND Rotation waehrend der Live-Aufnahme (echte Kamerabewegung ueber den
+# Tisch, nicht nur Stillstand-I/O-Test wie data/vo_sequences/2026-09-17_live_test/).
+# Start (0cm, 0 Grad) bis Ende (120cm, 90 Grad), 20cm-/15-Grad-Schritte --
+# dasselbe Raster wie die getrennten Translations- (2026-09-15) und
+# Rotationssequenzen (2026-09-17) heute, damit direkt vergleichbar.
+#
+# rotations_deg: kumulierter Drehwinkel gegenueber Frame 0, um die Kamera-
+# y-Achse (nach unten), NEGATIVE Richtung -- Konvention aus der reinen
+# Rotationssequenz heute uebernommen (siehe docs/decisions.md, 2026-09-17,
+# Teil 2), gleiche physische Drehrichtung angenommen.
+points:
+  wp_00_000: [0.0, 0.0, 0.0]
+  wp_01_020: [-0.20, 0.0, 0.0]
+  wp_02_040: [-0.40, 0.0, 0.0]
+  wp_03_060: [-0.60, 0.0, 0.0]
+  wp_04_080: [-0.80, 0.0, 0.0]
+  wp_05_100: [-1.00, 0.0, 0.0]
+  wp_06_120: [-1.20, 0.0, 0.0]
+rotations_deg:
+  wp_00_000: 0
+  wp_01_020: 15
+  wp_02_040: 30
+  wp_03_060: 45
+  wp_04_080: 60
+  wp_05_100: 75
+  wp_06_120: 90

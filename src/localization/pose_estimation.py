@@ -85,6 +85,18 @@ def estimate_relative_pose_ransac(
         R, t: refit via estimate_relative_pose() on the largest inlier set.
         inlier_mask: (N,) bool array, True for correspondences used in the
             final refit.
+
+    Raises:
+        RuntimeError: even the best 3-point hypothesis found fewer than 3
+            inliers (including, potentially, some of its own 3 sample
+            points -- a 3-point Kabsch fit is only exact for noiseless,
+            perfectly consistent correspondences; real triangulated points
+            carry noise, so a tight inlier_threshold can reject even the
+            fitted points themselves). Observed live on 2026-09-17 with
+            noisier images (reduced exposure + higher gain, see
+            docs/decisions.md) -- previously an uncaught ValueError from
+            the refit call below, crashing the live-VO loop instead of
+            being handled like the "too few temporal matches" case.
     """
     points_prev = np.asarray(points_prev, dtype=np.float64)
     points_curr = np.asarray(points_curr, dtype=np.float64)
@@ -110,5 +122,10 @@ def estimate_relative_pose_ransac(
             best_inlier_count = inlier_count
             best_inlier_mask = inlier_mask
 
+    if best_inlier_count < 3:
+        raise RuntimeError(
+            f"RANSAC found only {best_inlier_count} inliers (< 3) over {max_iterations} iterations "
+            "-- cannot fit a rigid pose, correspondences too noisy/inconsistent"
+        )
     R, t = estimate_relative_pose(points_prev[best_inlier_mask], points_curr[best_inlier_mask])
     return R, t, best_inlier_mask

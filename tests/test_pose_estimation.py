@@ -106,3 +106,20 @@ def test_ransac_rejects_too_few_points():
     points = _random_points(n=2)
     with pytest.raises(ValueError):
         estimate_relative_pose_ransac(points, points)
+
+
+def test_ransac_rejects_degenerate_inlier_set():
+    # 3 points is the minimum RANSAC can sample; a 3-point Kabsch fit is
+    # only exact for noiseless, perfectly consistent correspondences --
+    # real triangulated points carry noise, so an unrelated/inconsistent
+    # 3-point correspondence under a tight threshold can end up with fewer
+    # than 3 inliers even for its own fitted points. Reproduces a live
+    # crash seen on 2026-09-17 (noisier images from reduced exposure +
+    # higher gain, see docs/decisions.md) -- previously an uncaught
+    # ValueError instead of a catchable RuntimeError.
+    rng = np.random.default_rng(0)
+    points_prev = rng.uniform(-1, 1, size=(3, 3))
+    points_curr = rng.uniform(-1, 1, size=(3, 3))  # unrelated -- no rigid transform fits all 3
+
+    with pytest.raises(RuntimeError):
+        estimate_relative_pose_ransac(points_prev, points_curr, inlier_threshold=1e-9, seed=0)

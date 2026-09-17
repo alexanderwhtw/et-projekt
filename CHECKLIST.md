@@ -379,6 +379,17 @@ Annahme.
   Messreihen, ATE/RPE über mehrere Sequenzen, Validierung) bleibt der
   nächste große offene Block — Projekt ist NICHT "fertig bis auf
   Optimierung", siehe Diskussion `docs/decisions.md` (2026-09-15).
+- 🔴 **Experiment (nicht geplant, spontan)**: kontinuierliche Live-Bewegung
+  statt Stop-and-Shoot getestet (kürzere Belichtung + höherer Gain gegen
+  Bewegungsunschärfe, automatischer 2s-Takt). Dabei Absturz-Bug in
+  `estimate_relative_pose_ransac()` gefunden und behoben (rohe `ValueError`
+  → sauberer `RuntimeError`, 1 neuer Test, 83/83 grün). **Ergebnis des
+  Experiments selbst: negativ/offen** — Trajektorie divergierte früh,
+  RANSAC versagte nach 9 von 20 Frames, wahrscheinlich durch stark erhöhtes
+  Sensorrauschen (Gain 8,0). Stop-and-Shoot bleibt der validierte Ansatz,
+  kontinuierliche Bewegung ist mit der aktuellen einfachen VO (keine
+  Loop-Closure) nicht robust nutzbar. Details + vorgeschlagenes
+  kontrolliertes Folge-Experiment in `docs/decisions.md` (2026-09-17, Teil 4).
 
 ### Zwischenschritt (2026-09-16, kein Pi-Zugriff): `src/evaluation/` (ATE/RPE) implementiert
 
