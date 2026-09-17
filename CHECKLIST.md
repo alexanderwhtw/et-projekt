@@ -379,17 +379,25 @@ Annahme.
   Messreihen, ATE/RPE über mehrere Sequenzen, Validierung) bleibt der
   nächste große offene Block — Projekt ist NICHT "fertig bis auf
   Optimierung", siehe Diskussion `docs/decisions.md` (2026-09-15).
-- 🔴 **Experiment (nicht geplant, spontan)**: kontinuierliche Live-Bewegung
+- 🟢 **Experiment (nicht geplant, spontan)**: kontinuierliche Live-Bewegung
   statt Stop-and-Shoot getestet (kürzere Belichtung + höherer Gain gegen
   Bewegungsunschärfe, automatischer 2s-Takt). Dabei Absturz-Bug in
   `estimate_relative_pose_ransac()` gefunden und behoben (rohe `ValueError`
-  → sauberer `RuntimeError`, 1 neuer Test, 83/83 grün). **Ergebnis des
-  Experiments selbst: negativ/offen** — Trajektorie divergierte früh,
-  RANSAC versagte nach 9 von 20 Frames, wahrscheinlich durch stark erhöhtes
-  Sensorrauschen (Gain 8,0). Stop-and-Shoot bleibt der validierte Ansatz,
-  kontinuierliche Bewegung ist mit der aktuellen einfachen VO (keine
-  Loop-Closure) nicht robust nutzbar. Details + vorgeschlagenes
-  kontrolliertes Folge-Experiment in `docs/decisions.md` (2026-09-17, Teil 4).
+  → sauberer `RuntimeError`, 1 neuer Test, 83/83 grün). **Erster Versuch
+  (schnelle Bewegung): negativ** — Trajektorie divergierte früh, RANSAC
+  versagte nach 9 von 20 Frames. Visueller Bildabgleich zeigte zu große
+  Blickfeldsprünge zwischen Frames als wahrscheinlichste Ursache (mehr als
+  Sensorrauschen allein). **Zweiter Versuch (viel langsamere Bewegung,
+  gleiches Ziel 0-120cm/0-90°): positiv** — 44 Frames ohne RANSAC-Versagen,
+  glatte Trajektorie, Rotation nur 4,3° Fehler bei 90°-Ziel. Bestätigt: die
+  Bewegungsgeschwindigkeit pro Schritt war der entscheidende Faktor, nicht
+  primär die Belichtung. Kontinuierliche Bewegung ist damit ein plausibler
+  Ansatz für einen künftigen Rover-Einsatz bei abgestimmtem Tempo/Takt,
+  bleibt aber kein Ersatz für die bisherige Stop-and-Shoot-Validierung.
+  Nebenbei: SIGINT wird für Hintergrund-Jobs aus nicht-interaktiven Shells
+  ignoriert -- `run_vo_live.py` fängt jetzt zusätzlich `SIGTERM` ab, damit
+  `kill <pid>` zuverlässig sauber stoppt. Details in `docs/decisions.md`
+  (2026-09-17, Teil 4 + Teil 5).
 
 ### Zwischenschritt (2026-09-16, kein Pi-Zugriff): `src/evaluation/` (ATE/RPE) implementiert
 

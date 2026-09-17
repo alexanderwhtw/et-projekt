@@ -37,6 +37,7 @@ Nutzung:
 """
 
 import argparse
+import signal
 import sys
 import time
 from datetime import date
@@ -60,7 +61,18 @@ RESULTS_DIR = REPO_ROOT / "results" / "measurements"
 MANIFEST_FIELDNAMES = ["index", "notiz", "shutter", "gain", "timestamp"]
 
 
+def _raise_keyboard_interrupt(signum, frame):
+    raise KeyboardInterrupt
+
+
 def main() -> None:
+    # SIGINT is ignored by design for background jobs started from a
+    # non-interactive shell (e.g. `nohup ... & disown` over ssh, see
+    # docs/decisions.md, 2026-09-17) -- plain `kill <pid>` (SIGTERM) is not
+    # affected by that and is the reliable way to stop a background live-VO
+    # run, so it needs the same graceful-stop handling as Ctrl+C.
+    signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
+
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--sequence-dir", type=Path, required=True)
     parser.add_argument("--n-frames", type=int, required=True)
