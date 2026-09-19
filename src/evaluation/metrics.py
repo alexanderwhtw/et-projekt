@@ -129,6 +129,27 @@ def relative_rotation_error(R_estimated: np.ndarray, R_ground_truth: np.ndarray,
     }
 
 
+def cumulative_path_length(positions: np.ndarray) -> np.ndarray:
+    """Cumulative Euclidean distance traveled along a sequence of positions.
+
+    Used as the x-axis (distance instead of frame index) for plotting how
+    ATE/RPE grow over the traveled path, e.g. for a long combined-motion
+    validation sequence (see CHECKLIST.md, Phase 3 planning) -- frame index
+    alone doesn't account for varying step sizes.
+
+    Args:
+        positions: (N, 3) positions, in traversal order.
+
+    Returns:
+        (N,) array, meters, starting at 0.0 for the first position.
+    """
+    positions = np.asarray(positions, dtype=np.float64)
+    if len(positions) == 0:
+        return np.zeros(0)
+    step_lengths = np.linalg.norm(np.diff(positions, axis=0), axis=1)
+    return np.concatenate([[0.0], np.cumsum(step_lengths)])
+
+
 def rotation_error_deg(R_est: np.ndarray, R_gt: np.ndarray) -> float:
     """Angle (degrees) between two rotation matrices, via the trace formula.
 

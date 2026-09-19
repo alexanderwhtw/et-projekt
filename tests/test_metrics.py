@@ -4,6 +4,7 @@ import pytest
 
 from src.evaluation.metrics import (
     absolute_trajectory_error,
+    cumulative_path_length,
     relative_pose_error,
     relative_rotation_error,
     rotation_error_deg,
@@ -153,3 +154,32 @@ def test_relative_rotation_error_rejects_length_mismatch():
 def test_relative_rotation_error_rejects_too_few_frames_for_delta():
     with pytest.raises(ValueError):
         relative_rotation_error(np.zeros((2, 3, 3)), np.zeros((2, 3, 3)), delta=2)
+
+
+def test_cumulative_path_length_straight_line():
+    positions = np.array([[0, 0, 0], [0.2, 0, 0], [0.4, 0, 0], [0.6, 0, 0]], dtype=float)
+
+    result = cumulative_path_length(positions)
+
+    np.testing.assert_allclose(result, [0.0, 0.2, 0.4, 0.6])
+
+
+def test_cumulative_path_length_with_turn():
+    # 3-4-5 triangle: 3m along x, then 4m along z -> 3m, then 7m cumulative
+    positions = np.array([[0, 0, 0], [3, 0, 0], [3, 0, 4]], dtype=float)
+
+    result = cumulative_path_length(positions)
+
+    np.testing.assert_allclose(result, [0.0, 3.0, 7.0])
+
+
+def test_cumulative_path_length_single_point_is_zero():
+    result = cumulative_path_length(np.array([[1.0, 2.0, 3.0]]))
+
+    np.testing.assert_allclose(result, [0.0])
+
+
+def test_cumulative_path_length_empty_is_empty():
+    result = cumulative_path_length(np.zeros((0, 3)))
+
+    assert len(result) == 0
