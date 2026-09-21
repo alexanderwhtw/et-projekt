@@ -41,6 +41,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.calibration.io import load_calibration_result  # noqa: E402
 from src.calibration.rectification import compute_rectification_maps  # noqa: E402
+from src.localization.pose_estimation import ImplausiblePoseError  # noqa: E402
 from src.localization.vo_pipeline import init_vo_step, step_vo_pipeline  # noqa: E402
 
 DEFAULT_CALIBRATION = REPO_ROOT / "results" / "calibration" / "2026-09-07_calibration.yaml"
@@ -84,6 +85,39 @@ def main() -> None:
         "Ohne festen Seed schwankt vor allem der Fehler bei merkmalsarmen Frames stark "
         "zwischen Laeufen, siehe docs/decisions.md (2026-09-16).",
     )
+    parser.add_argument(
+        "--max-translation-m",
+        type=float,
+        default=None,
+        help="Plausibilitaets-Filter: maximale Translation (m) pro Schritt, groessere Sprünge "
+        "werden als Fehlmatch verworfen (Frame wird uebersprungen, siehe docs/decisions.md 2026-09-21). "
+        "Default: kein Filter.",
+    )
+    parser.add_argument(
+        "--max-rotation-deg",
+        type=float,
+        default=None,
+        help="Plausibilitaets-Filter: maximale Rotation (Grad) pro Schritt, siehe --max-translation-m.",
+    )
+    parser.add_argument(
+        "--ratio-threshold",
+        type=float,
+        default=0.75,
+        help="Lowe's-Ratio-Schwellwert fuer temporales Matching (Default: 0.75).",
+    )
+    parser.add_argument(
+        "--ransac-inlier-threshold",
+        type=float,
+        default=0.02,
+        help="RANSAC-Inlier-Schwellwert in Metern (Default: 0.02).",
+    )
+    parser.add_argument(
+        "--tag",
+        type=str,
+        default=None,
+        help="Suffix fuer den Ergebnisordner (results/measurements/<datum>_vo_sequence_test_<tag>/), "
+        "um mehrere Laeufe am selben Tag nicht zu ueberschreiben.",
+    )
     args = parser.parse_args()
     reference_points_path = args.reference_points or (args.sequence_dir / "ground_truth.yaml")
 
@@ -117,16 +151,46 @@ def main() -> None:
     poses = [pose]
     print(f"  Frame 0: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
 
+    n_skipped = 0
+    skip_streak = 0
     for frame_index, entry in enumerate(entries[1:], start=1):
         image_L, image_R = load_rectified(entry)
+        # bound scales with consecutive skips -- see src/localization/vo_pipeline.py::run_vo_pipeline()
+        # docstring / docs/decisions.md (2026-09-21): a fixed bound cascades into total tracking loss.
+        scale = 1 + skip_streak
+        effective_max_translation_m = None if args.max_translation_m is None else args.max_translation_m * scale
+        effective_max_rotation_deg = None if args.max_rotation_deg is None else args.max_rotation_deg * scale
         try:
-            pose, points, descriptors = step_vo_pipeline(
-                image_L, image_R, P_L, P_R, pose, points, descriptors, seed=args.seed
+            new_pose, new_points, new_descriptors = step_vo_pipeline(
+                image_L,
+                image_R,
+                P_L,
+                P_R,
+                pose,
+                points,
+                descriptors,
+                ratio_threshold=args.ratio_threshold,
+                ransac_inlier_threshold=args.ransac_inlier_threshold,
+                seed=args.seed,
+                max_translation_m=effective_max_translation_m,
+                max_rotation_deg=effective_max_rotation_deg,
             )
+        except ImplausiblePoseError as e:
+            # skip: repeat prev pose, keep matching against the last trusted state
+            # (see run_vo_pipeline() docstring, src/localization/vo_pipeline.py)
+            n_skipped += 1
+            skip_streak += 1
+            poses.append(pose)
+            print(f"  Frame {frame_index}: UEBERSPRUNGEN ({e})")
+            continue
         except RuntimeError as e:
             raise RuntimeError(f"frame {frame_index}: {e}") from e
+        skip_streak = 0
+        pose, points, descriptors = new_pose, new_points, new_descriptors
         poses.append(pose)
         print(f"  Frame {frame_index}: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
+    if n_skipped:
+        print(f"\n{n_skipped} Frame(s) durch Plausibilitaets-Filter uebersprungen.")
 
     positions = np.array([pose[:3, 3] for pose in poses])
     rotations = np.array([pose[:3, :3] for pose in poses])
@@ -154,7 +218,8 @@ def main() -> None:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     today = date.today().isoformat()
-    output_path = RESULTS_DIR / f"{today}_vo_sequence_test" / "trajectory.yaml"
+    folder_name = f"{today}_vo_sequence_test" + (f"_{args.tag}" if args.tag else "")
+    output_path = RESULTS_DIR / folder_name / "trajectory.yaml"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         yaml.safe_dump(
@@ -162,6 +227,11 @@ def main() -> None:
                 "sequence_dir": str(args.sequence_dir),
                 "calibration": str(args.calibration),
                 "seed": args.seed,
+                "ratio_threshold": args.ratio_threshold,
+                "ransac_inlier_threshold": args.ransac_inlier_threshold,
+                "max_translation_m": args.max_translation_m,
+                "max_rotation_deg": args.max_rotation_deg,
+                "n_skipped": n_skipped,
                 "positions": [p.tolist() for p in positions],
                 "rotations": [r.tolist() for r in rotations],
             },

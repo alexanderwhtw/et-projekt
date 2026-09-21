@@ -13,7 +13,54 @@ Delta-Pose in `Pose_t = Pose_t-1 . Delta-Pose` used for trajectory chaining
 (see docs/decisions.md, 2026-09-04).
 """
 
+import cv2
 import numpy as np
+
+
+class ImplausiblePoseError(RuntimeError):
+    """A relative pose was estimated (RANSAC found enough inliers), but its
+    magnitude exceeds a physically reasoned per-step motion bound (see
+    check_pose_plausibility(), docs/decisions.md 2026-09-21). Unlike the
+    plain RuntimeError above (too few inliers -- no usable pose exists at
+    all), a full previous VO state remains valid here, so callers can skip
+    this one frame and retry with the next one instead of stopping the
+    trajectory for good."""
+
+
+def relative_pose_magnitude(R: np.ndarray, t: np.ndarray) -> tuple[float, float]:
+    """Translation distance (m) and rotation angle (deg) of a relative pose."""
+    translation_m = float(np.linalg.norm(t))
+    rvec, _ = cv2.Rodrigues(R)
+    rotation_deg = float(np.degrees(np.linalg.norm(rvec)))
+    return translation_m, rotation_deg
+
+
+def check_pose_plausibility(
+    R: np.ndarray,
+    t: np.ndarray,
+    max_translation_m: float | None,
+    max_rotation_deg: float | None,
+) -> None:
+    """Raise ImplausiblePoseError if (R, t) exceeds a physically reasoned
+    per-step motion bound. Either bound is disabled by passing None.
+
+    Motivation (see docs/decisions.md, 2026-09-21): real captured sequences
+    showed isolated frame-to-frame mismatches at repetitive scene structures
+    (door frame edges, a checkered curtain, a ladder's evenly spaced rungs)
+    that RANSAC accepted as self-consistent (the wrong correspondences agree
+    with each other), producing single-step jumps of ~0.3-0.4m against a
+    background distribution with median ~0.03m and 95th percentile ~0.18m --
+    clearly separated from normal motion, not just noisy. RANSAC's inlier
+    count alone cannot distinguish "self-consistently wrong" from "correct";
+    an independent physical plausibility bound can.
+    """
+    translation_m, rotation_deg = relative_pose_magnitude(R, t)
+    if max_translation_m is not None and translation_m > max_translation_m:
+        raise ImplausiblePoseError(
+            f"translation {translation_m:.3f}m exceeds max_translation_m={max_translation_m}"
+        )
+    if max_rotation_deg is not None and rotation_deg > max_rotation_deg:
+        raise ImplausiblePoseError(f"rotation {rotation_deg:.1f}deg exceeds max_rotation_deg={max_rotation_deg}")
 
 
 def estimate_relative_pose(points_prev: np.ndarray, points_curr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

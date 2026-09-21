@@ -2,7 +2,13 @@ import cv2
 import numpy as np
 import pytest
 
-from src.localization.pose_estimation import estimate_relative_pose, estimate_relative_pose_ransac
+from src.localization.pose_estimation import (
+    ImplausiblePoseError,
+    check_pose_plausibility,
+    estimate_relative_pose,
+    estimate_relative_pose_ransac,
+    relative_pose_magnitude,
+)
 
 
 def _random_points(n: int = 20, seed: int = 0) -> np.ndarray:
@@ -123,3 +129,42 @@ def test_ransac_rejects_degenerate_inlier_set():
 
     with pytest.raises(RuntimeError):
         estimate_relative_pose_ransac(points_prev, points_curr, inlier_threshold=1e-9, seed=0)
+
+
+def test_relative_pose_magnitude_pure_translation():
+    t = np.array([0.3, 0.0, 0.4])  # 3-4-5 triangle -> norm 0.5
+    translation_m, rotation_deg = relative_pose_magnitude(np.eye(3), t)
+
+    assert translation_m == pytest.approx(0.5)
+    assert rotation_deg == pytest.approx(0.0)
+
+
+def test_relative_pose_magnitude_pure_rotation():
+    R, _ = cv2.Rodrigues(np.array([0.0, np.radians(30.0), 0.0]))
+    translation_m, rotation_deg = relative_pose_magnitude(R, np.zeros(3))
+
+    assert translation_m == pytest.approx(0.0)
+    assert rotation_deg == pytest.approx(30.0)
+
+
+def test_check_pose_plausibility_accepts_normal_motion():
+    R, _ = cv2.Rodrigues(np.array([0.0, np.radians(5.0), 0.0]))
+    t = np.array([0.03, 0.0, 0.02])
+    check_pose_plausibility(R, t, max_translation_m=0.2, max_rotation_deg=20.0)  # must not raise
+
+
+def test_check_pose_plausibility_rejects_excessive_translation():
+    with pytest.raises(ImplausiblePoseError):
+        check_pose_plausibility(np.eye(3), np.array([0.35, 0.0, 0.0]), max_translation_m=0.2, max_rotation_deg=None)
+
+
+def test_check_pose_plausibility_rejects_excessive_rotation():
+    R, _ = cv2.Rodrigues(np.array([0.0, np.radians(45.0), 0.0]))
+    with pytest.raises(ImplausiblePoseError):
+        check_pose_plausibility(R, np.zeros(3), max_translation_m=None, max_rotation_deg=20.0)
+
+
+def test_check_pose_plausibility_disabled_bounds_never_raise():
+    R, _ = cv2.Rodrigues(np.array([0.0, np.radians(179.0), 0.0]))
+    t = np.array([100.0, 100.0, 100.0])
+    check_pose_plausibility(R, t, max_translation_m=None, max_rotation_deg=None)  # must not raise

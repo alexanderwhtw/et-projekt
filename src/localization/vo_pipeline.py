@@ -24,7 +24,7 @@ from typing import Sequence
 import numpy as np
 
 from .features import detect_features
-from .pose_estimation import estimate_relative_pose_ransac
+from .pose_estimation import ImplausiblePoseError, check_pose_plausibility, estimate_relative_pose_ransac
 from .stereo_depth import match_stereo_pairs, triangulate_matches
 from .temporal_matching import match_temporal_features
 from .trajectory import to_homogeneous
@@ -102,6 +102,8 @@ def step_vo_pipeline(
     ransac_inlier_threshold: float = 0.02,
     ransac_iterations: int = 200,
     seed: int | None = None,
+    max_translation_m: float | None = None,
+    max_rotation_deg: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Process one new stereo frame against the previous frame's VO state.
 
@@ -129,6 +131,10 @@ def step_vo_pipeline(
             based for that reason, not plain least-squares.
         seed: RNG seed forwarded to RANSAC sampling, for reproducible runs
             (tests). None = nondeterministic.
+        max_translation_m, max_rotation_deg: optional physically reasoned
+            per-step motion bounds (see check_pose_plausibility(),
+            docs/decisions.md 2026-09-21). None (default) disables the
+            check entirely, preserving prior behaviour.
 
     Returns:
         (pose, points_3d, descriptors) -- the new absolute pose, and the new
@@ -138,10 +144,16 @@ def step_vo_pipeline(
         RuntimeError: fewer than min_temporal_matches valid temporal
             correspondences to the previous frame, or RANSAC couldn't find
             a rigid pose with at least 3 inliers among the matches (see
-            estimate_relative_pose_ransac()) -- the pipeline stops rather
-            than silently produce an unreliable pose (no loop-closure/
-            correction exists to fix it later, see docs/decisions.md,
-            2026-09-04).
+            estimate_relative_pose_ransac()) -- no usable pose exists at
+            all, the pipeline stops rather than silently produce an
+            unreliable one (no loop-closure/correction exists to fix it
+            later, see docs/decisions.md, 2026-09-04).
+        ImplausiblePoseError: a pose WAS estimated, but its magnitude
+            exceeds max_translation_m/max_rotation_deg -- unlike the plain
+            RuntimeError above, prev_pose/prev_points/prev_descriptors
+            remain a valid, usable state, so callers (see run_vo_pipeline())
+            can skip this one frame and retry with the next one instead of
+            stopping the trajectory for good.
     """
     points_curr, descriptors_curr = extract_frame_points(image_L, image_R, P_L, P_R, n_features, max_y_diff)
 
@@ -157,6 +169,7 @@ def step_vo_pipeline(
     R, t, _inlier_mask = estimate_relative_pose_ransac(
         matched_prev, matched_curr, ransac_inlier_threshold, ransac_iterations, seed
     )
+    check_pose_plausibility(R, t, max_translation_m, max_rotation_deg)
 
     pose = prev_pose @ to_homogeneous(R, t)
     return pose, points_curr, descriptors_curr
@@ -174,6 +187,8 @@ def run_vo_pipeline(
     ransac_inlier_threshold: float = 0.02,
     ransac_iterations: int = 200,
     seed: int | None = None,
+    max_translation_m: float | None = None,
+    max_rotation_deg: float | None = None,
 ) -> list[np.ndarray]:
     """Run the VO chain over a sequence of already-captured stereo frames.
 
@@ -187,15 +202,38 @@ def run_vo_pipeline(
         P_L, P_R, initial_pose, n_features, max_y_diff, ratio_threshold,
         min_temporal_matches, ransac_inlier_threshold, ransac_iterations,
         seed: see init_vo_step()/step_vo_pipeline().
+        max_translation_m, max_rotation_deg: per-ORIGINAL-frame-interval
+            plausibility bounds (see check_pose_plausibility()). After N
+            consecutive skipped frames, the effective bound passed to
+            step_vo_pipeline() is scaled by (N+1) before the next attempt,
+            since more real motion is expected to bridge a wider gap --
+            without this, a fixed bound cascades into total tracking loss
+            (see docs/decisions.md, 2026-09-21).
 
     Returns:
-        List of len(stereo_frames) absolute 4x4 poses, one per frame.
+        List of len(stereo_frames) absolute 4x4 poses, one per frame. A
+        frame rejected by the plausibility filter (see below) repeats the
+        previous frame's pose rather than shortening the list, so poses[i]
+        always corresponds to stereo_frames[i] (ground-truth/plotting code
+        matches by index, see docs/decisions.md 2026-09-21).
 
     Raises:
         ValueError: no frames given.
         RuntimeError: a consecutive frame pair has fewer than
-            min_temporal_matches valid temporal correspondences (see
-            step_vo_pipeline()).
+            min_temporal_matches valid temporal correspondences, or no
+            usable pose at all could be found (see step_vo_pipeline()) --
+            an unrecoverable loss of tracking, unlike the case below.
+        ImplausiblePoseError is NOT raised out of this function: when
+            step_vo_pipeline() rejects a frame as implausible, that one
+            frame is skipped (its pose repeats the previous frame's, its
+            points/descriptors are discarded) and the next frame is matched
+            against the last trusted state instead -- see
+            docs/decisions.md, 2026-09-21: the observed real-world failures
+            were isolated single-frame mismatches at repetitive scene
+            structures, with normal tracking resuming immediately after,
+            so discarding just the bad frame is preferable to stopping the
+            whole trajectory (which min_temporal_matches/RANSAC failures
+            still do, since no valid state remains in that case).
     """
     if not stereo_frames:
         raise ValueError("need at least 1 stereo frame")
@@ -203,9 +241,22 @@ def run_vo_pipeline(
     pose, points, descriptors = init_vo_step(*stereo_frames[0], P_L, P_R, initial_pose, n_features, max_y_diff)
     poses = [pose]
 
+    # Consecutive skips widen the real motion gap to bridge (more real time/
+    # distance has passed since the last trusted frame) -- a FIXED bound
+    # would then reject an increasing majority of legitimate continuations,
+    # cascading into total tracking loss. Empirically hit while tuning this
+    # filter (see docs/decisions.md, 2026-09-21): 7 consecutive rejections
+    # with growing reported magnitudes, ending in a hard RANSAC failure.
+    # Scaling the bound by (1 + consecutive skip count) keeps it a per-
+    # ORIGINAL-frame-interval bound regardless of how many frames were
+    # skipped in between.
+    skip_streak = 0
     for frame_index, (image_L, image_R) in enumerate(stereo_frames[1:], start=1):
+        scale = 1 + skip_streak
+        effective_max_translation_m = None if max_translation_m is None else max_translation_m * scale
+        effective_max_rotation_deg = None if max_rotation_deg is None else max_rotation_deg * scale
         try:
-            pose, points, descriptors = step_vo_pipeline(
+            new_pose, new_points, new_descriptors = step_vo_pipeline(
                 image_L,
                 image_R,
                 P_L,
@@ -220,9 +271,17 @@ def run_vo_pipeline(
                 ransac_inlier_threshold,
                 ransac_iterations,
                 seed,
+                effective_max_translation_m,
+                effective_max_rotation_deg,
             )
+        except ImplausiblePoseError:
+            skip_streak += 1
+            poses.append(pose)  # skip this frame: repeat prev pose, keep matching against the last trusted state
+            continue
         except RuntimeError as e:
             raise RuntimeError(f"frame {frame_index}: {e}") from e
+        skip_streak = 0
+        pose, points, descriptors = new_pose, new_points, new_descriptors
         poses.append(pose)
 
     return poses

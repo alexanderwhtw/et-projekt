@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import pytest
 
+from src.localization.pose_estimation import ImplausiblePoseError
 from src.localization.vo_pipeline import extract_frame_points, init_vo_step, run_vo_pipeline, step_vo_pipeline
 
 
@@ -147,6 +148,84 @@ def test_step_vo_pipeline_matches_run_vo_pipeline_on_same_sequence():
 
     for batch_pose, streaming_pose in zip(batch_poses, streaming_poses):
         np.testing.assert_allclose(batch_pose, streaming_pose)
+
+
+def test_step_vo_pipeline_raises_implausible_pose_error_on_excessive_motion():
+    # see docs/decisions.md, 2026-09-21: real sequences showed isolated
+    # frame-to-frame mismatches accepted by RANSAC as self-consistent,
+    # producing implausibly large single-step jumps -- a physically
+    # reasoned bound should reject them even though RANSAC itself succeeds.
+    fx, baseline, disparity, huge_shift_px = 500.0, 0.06, 20, 150
+    P_L, P_R = _projection_matrices(fx=fx, fy=fx, baseline=baseline)
+
+    left0 = _make_scene()
+    right0 = np.roll(left0, -disparity, axis=1)
+    left1 = np.roll(left0, -huge_shift_px, axis=1)
+    right1 = np.roll(left1, -disparity, axis=1)
+
+    pose, points, descriptors = init_vo_step(left0, right0, P_L, P_R)
+
+    with pytest.raises(ImplausiblePoseError):
+        step_vo_pipeline(left1, right1, P_L, P_R, pose, points, descriptors, seed=0, max_translation_m=0.2)
+
+
+def test_run_vo_pipeline_skips_implausible_frame_and_continues_from_last_trusted_state():
+    fx, baseline, disparity = 500.0, 0.06, 20
+    depth = fx * baseline / disparity
+    P_L, P_R = _projection_matrices(fx=fx, fy=fx, baseline=baseline)
+
+    huge_shift_px, small_shift_px = 150, 15
+    expected_tx_small = small_shift_px * depth / fx
+
+    left0 = _make_scene()
+    right0 = np.roll(left0, -disparity, axis=1)
+    left1 = np.roll(left0, -huge_shift_px, axis=1)  # implausible jump, should be skipped
+    right1 = np.roll(left1, -disparity, axis=1)
+    left2 = np.roll(left0, -small_shift_px, axis=1)  # small shift from the ORIGINAL frame 0
+    right2 = np.roll(left2, -disparity, axis=1)
+
+    poses = run_vo_pipeline(
+        [(left0, right0), (left1, right1), (left2, right2)], P_L, P_R, seed=0, max_translation_m=0.2
+    )
+
+    assert len(poses) == 3  # skipped frame still occupies a slot, see docstring
+    np.testing.assert_allclose(poses[1], poses[0])  # frame 1 rejected -> repeats frame 0's pose
+    # frame 2 must match the SMALL shift from frame 0 (last trusted state), not compound the huge one
+    assert abs(poses[2][0, 3] - expected_tx_small) < 0.01
+
+
+def test_run_vo_pipeline_scales_plausibility_bound_after_consecutive_skips():
+    # see docs/decisions.md, 2026-09-21: a FIXED bound cascades into total
+    # tracking loss after a skip, because the real motion since the last
+    # trusted frame grows with every further skip -- empirically hit while
+    # tuning this filter (7 consecutive rejections, then a hard RANSAC
+    # failure). Construct a case where frame 2's shift from the last TRUSTED
+    # frame (frame 0, since frame 1 gets skipped) exceeds the base bound but
+    # fits the doubled bound that applies after exactly one skip.
+    fx, baseline, disparity = 500.0, 0.06, 20
+    depth = fx * baseline / disparity
+    P_L, P_R = _projection_matrices(fx=fx, fy=fx, baseline=baseline)
+    base_bound = 0.1
+    shift_px_1, shift_px_2 = 40, 50  # -> 0.12m (rejected alone), 0.15m (fits 2x bound, not 1x)
+    expected_tx_2 = shift_px_2 * depth / fx
+
+    left0 = _make_scene()
+    right0 = np.roll(left0, -disparity, axis=1)
+    left1 = np.roll(left0, -shift_px_1, axis=1)
+    right1 = np.roll(left1, -disparity, axis=1)
+    left2 = np.roll(left0, -shift_px_2, axis=1)  # independent shift from frame 0, not from frame 1
+    right2 = np.roll(left2, -disparity, axis=1)
+
+    poses = run_vo_pipeline(
+        [(left0, right0), (left1, right1), (left2, right2)], P_L, P_R, seed=0, max_translation_m=base_bound
+    )
+
+    assert len(poses) == 3
+    np.testing.assert_allclose(poses[1], poses[0])  # frame 1 skipped (0.12m > 0.1m base bound)
+    # frame 2 (0.15m from frame 0) exceeds the base bound too, but is recovered because the
+    # bound doubles after one skip (0.15m < 0.2m) -- proves the scaling, not just plain recovery
+    assert abs(poses[2][0, 3] - expected_tx_2) < 0.02
+    assert expected_tx_2 > base_bound
 
 
 def test_step_vo_pipeline_raises_on_too_few_temporal_matches():
