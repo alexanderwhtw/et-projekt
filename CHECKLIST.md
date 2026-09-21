@@ -542,6 +542,27 @@ Parameter-Sensitivität bleiben bewusst Ausblick.
   erste Vermutung (Nahbereichs-Fehler) war falsch, User-Korrektur war
   richtig. Kein Software-Fix heute, als Ausblick/Limitation dokumentiert.
   Details in `docs/decisions.md` (2026-09-21, Teil 5).
+- 🟢 Rotation/Translation über Zeit geplottet (`scripts/plot_rotation_over_time.py`,
+  `scripts/plot_translation_over_time.py`) für Baseline + alle 5
+  Filter-Varianten — bestätigt den Frame-30-Ausreißer visuell (25,5° in
+  einem Schritt) und zeigt, dass der Filter ihn sauber entfernt, ohne die
+  echte ~90°-Drehung (Frames 78-90) zu beeinträchtigen. Exp4 zeigt einen
+  neuen Ausreißer bei Frame 88 (mitten in der echten Drehung) — weiterer
+  Beleg gegen die Ratio-Verschärfung.
+- 🔴 **Fünfter Fehlermodus gefunden**: geometrische Entartung bei Frame
+  29→30 (dem größten Einzelausreißer, 0,601m/25,5°) — alle 11 RANSAC-Inlier
+  liegen räumlich geklumpt auf der Türklinke (Nahbereich, einzeln
+  unauffällige Korrespondenzen), zu wenig räumliche Streuung für einen
+  stabilen 6-DOF-Fit. Neues Diagnose-Tool `scripts/inspect_frame_range.py`
+  (Match-/Tiefen-/Pose-Statistik über einen ganzen Frame-Bereich statt nur
+  ein Paar) bestätigt den Fernbereichs-Befund (Nr. 4) zusätzlich lückenlos
+  über 20 Frame-Übergänge. Details in `docs/decisions.md` (2026-09-21, Teil 6).
+- 🟡 **Strategieüberlegung für morgen**: gewichtete Kabsch-Pose-Schätzung
+  nach Tiefe (1/Z²) als strukturellerer Fix gegen Fehlermodus 4 (Fernbereich)
+  — heute nur dokumentiert, nicht umgesetzt (Kern-Algorithmus-Änderung,
+  braucht sorgfältige Validierung). Löst Fehlermodus 5 (geometrische
+  Entartung) nicht mit. Details in `docs/decisions.md` (2026-09-21, Teil 7).
+  User bespricht ggf. Fristverlängerung mit Betreuer.
 - 🟡 Committen/Pushen dieser Sequenzen + Code-/Doku-Änderungen — Rückfrage
   an User ausstehend (siehe `CLAUDE.md`, nie ungefragt committen)
 
