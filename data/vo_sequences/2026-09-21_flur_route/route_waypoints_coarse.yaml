@@ -1,0 +1,12 @@
+# Automatisch generiert aus Bewegungs-Segmenten (siehe route_segments.yaml) via scripts/build_ground_truth.py --
+# NICHT von Hand editieren, stattdessen die Segment-Datei anpassen und neu generieren.
+# Achsenkonvention: OpenCV-Kamerakonvention (x=rechts, y=unten, z=in die Szene hinein),
+# Ursprung = erste Kameraposition/Frame 0. rotations_deg-Vorzeichenkonvention siehe
+# docs/decisions.md (2026-09-17 Teil 2, 2026-09-21).
+points:
+  frame_0: [0.0, 0.0, 0.0]
+  frame_1: [0.0, 0.0, 0.0]
+  frame_2: [-4.6, 0.0, 2.816687638038912e-16]
+  frame_3: [-4.6, 0.0, 2.816687638038912e-16]
+  frame_4: [-4.6, 0.0, -2.7999999999999994]
+rotations_deg: {frame_0: 0.0, frame_1: 90.0, frame_2: 90.0, frame_3: 180.0, frame_4: 180.0}

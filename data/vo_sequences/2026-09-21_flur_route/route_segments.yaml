@@ -1,0 +1,12 @@
+# Grobe Routen-Segmente (User-Bericht nach der Aufnahme, 2026-09-21):
+# 90 Grad links, 4.6m geradeaus, 90 Grad links, 2.8m geradeaus.
+# Bewusst NUR die 5 groben Wegpunkte (Start + nach jedem Segment), nicht
+# pro Frame -- die Aufnahme lief automatisch/kontinuierlich (--interval 2.0),
+# keine synchronen Zwischen-Messungen pro Einzelbild moeglich. Dient dem
+# Endpose-Vergleich (grobe ATE-artige Kennzahl), nicht scripts/plot_error_growth.py
+# (das exakt gleich viele GT-Punkte wie Frames braucht, hier 5 vs. 70).
+segments:
+  - {type: rotate, degrees: 90, direction: left}
+  - {type: translate, meters: 4.6}
+  - {type: rotate, degrees: 90, direction: left}
+  - {type: translate, meters: 2.8}
