@@ -78,6 +78,14 @@ def main() -> None:
         help="0-basierte Frame-Indizes, die als bereits diagnostizierte Ausreisser "
         "aus der Darstellung ausgeschlossen werden (grau markiert statt geglaettet)",
     )
+    parser.add_argument(
+        "--annotate-every",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Frame-Index alle N Frames an die Karte schreiben (0-basiert), zur Diagnose "
+        "welcher Kartenabschnitt zu welchem Frame gehoert. Default: keine Beschriftung.",
+    )
     parser.add_argument("--output", type=Path, default=None, help="Standard: neben der Trajektorie-Datei")
     args = parser.parse_args()
 
@@ -124,6 +132,19 @@ def main() -> None:
 
     ax.scatter(plotted[0, 0], plotted[0, 2], c="green", s=160, marker="*", zorder=5, label="Start")
     ax.scatter(plotted[-1, 0], plotted[-1, 2], c="red", s=140, marker="X", zorder=5, label="Ende")
+
+    if args.annotate_every:
+        for i in range(0, n, args.annotate_every):
+            if i in excluded:
+                continue
+            ax.annotate(
+                str(i),
+                (positions[i, 0], positions[i, 2]),
+                textcoords="offset points",
+                xytext=(5, 5),
+                fontsize=8,
+                color="dimgray",
+            )
 
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Z (m)")
