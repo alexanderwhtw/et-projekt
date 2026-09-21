@@ -469,6 +469,82 @@ nicht-Hardware-Blocker für Phase 3 angegangen.
   synchronisieren, nicht nur `git pull` verlassen (schlägt bei Divergenz
   fehl statt sich stillschweigend zu reparieren).
 
+## Tag 13 (geplant, 2026-09-21) — Fehler-vs-Distanz-Plot verifiziert, längere Kombi-Sequenz geplant
+
+Ziel laut User: Projekt heute auf praktischer Ebene (Code/Messungen, nicht
+Schreibarbeit) so weit wie möglich abschließen — Fokus: Phase 3 minimal
+abschließen (eine längere reale Validierungssequenz mit ATE/RPE +
+Fehler-vs-Distanz-Plot, dokumentiert), Root-Cause-Klärung Tiefenfehler und
+Parameter-Sensitivität bleiben bewusst Ausblick.
+
+- 🟢 `scripts/plot_error_growth.py` gegen zwei echte, bereits passende
+  Sequenzen (Tag 6, Tag 11) verifiziert — lief fehlerfrei, Kurven passen zu
+  den dokumentierten Befunden. Details in `docs/decisions.md` (2026-09-21).
+- 🔴 **Formatfalle erkannt**: die beiden `2026-09-17`-Live-Kombisequenzen
+  (Translation+Rotation) haben mehr Frames als Ground-Truth-Wegpunkte —
+  `plot_error_growth.py` kann darauf nicht laufen. Für Tag 13 daher Ground-
+  Truth live pro Frame protokollieren statt fixer Wegpunkte vorab. Details
+  in `docs/decisions.md` (2026-09-21).
+- 🟢 Neue, deutlich längere Kombi-Sequenz aufgenommen: 90° links, 4,6m,
+  90° links, 2,8m (7,4m Gesamtstrecke, durch eine Tür in den Flur) — erstmals
+  automatisch (`run_vo_live.py --interval 2.0`, kein Enter pro Frame), 70
+  Frames, Hintergrundprozess per `nohup`/`kill` gesteuert. Neues Skript
+  `scripts/build_ground_truth.py` (nutzt `chain_poses()` wieder) berechnet
+  grobe Wegpunkte aus den gemessenen Segmenten für einen Endpose-Vergleich.
+  Details in `docs/decisions.md` (2026-09-21, Teil 2).
+- 🟢 Ausgewertet: `plot_trajectory_map.py` (Top-Down-Karte,
+  `--exclude-frames 51` für den identifizierten Ausreißer). `plot_error_growth.py`
+  bewusst nicht anwendbar (nur 5 grobe Wegpunkte vs. 70 Frames, keine
+  Ground-Truth pro Einzelframe bei automatischer Aufnahme möglich). Stattdessen
+  manueller Endpose-Vergleich: Rotation 170,7° vs. erwartet 180° (~5% Fehler,
+  robust), Position 1,64m Endfehler (~22% der Strecke, groß bei einem
+  visuell bestätigten Ausreißer an einer Tür-Passage). Details in
+  `docs/decisions.md`.
+- 🟢 Ergebnis in `docs/decisions.md` dokumentiert (Teil 2), inkl. Einordnung
+  für die Arbeit (Drift-/Grenzen-Diskussion: längere reale Strecke
+  grundsätzlich brauchbar, konkreter Versagensfall an Textur-armer
+  Tür-Passage visuell erklärt statt nur vermutet)
+- 🔴 Wiederholung mit zwei Gegenmaßnahmen (`--interval 0` statt 2s Sleep,
+  Objekt an der kritischen texturlosen Wand): kleinere Positions-Ausreißer
+  reduziert, aber **neuer katastrophaler Fehler gefunden** — die als
+  Gegenmaßnahme aufgestellte Leiter mit regelmäßigen Sprossen verursachte
+  einen Fehlmatch, der die kumulierte Rotation in einem Schritt von 13° auf
+  87° springen ließ (visuell an praktisch identischen Bildern Frame 86/87
+  bestätigt) und die komplette Trajektorie danach verfälscht — User-Einwand
+  ("Karte müsste ein L zeigen") führte zur Korrektur einer zu vorschnellen
+  ersten Einschätzung. Lehre: repetitive Muster (Leiter, Gitter, Karo-Stoff)
+  sind als "mehr Textur"-Gegenmaßnahme ungeeignet, unregelmäßige Muster
+  vorziehen. Route wich zudem von der Planung ab (erste Drehung vergessen),
+  daher ohnehin nur qualitativ auswertbar. Details in `docs/decisions.md`
+  (2026-09-21, Teil 3, inkl. Korrektur).
+- 🟢 **Plausibilitäts-Filter implementiert** (`ImplausiblePoseError` +
+  `check_pose_plausibility()` in `pose_estimation.py`, Skip-und-Weiter-Logik
+  in `vo_pipeline.py::run_vo_pipeline()` und `run_vo_sequence.py`, 8 neue
+  Tests, 96/96 grün): begründete Sensitivitätsprüfung statt Blackbox-
+  Optimierung (5 Parameter-Durchgänge gegen `flur_route_v2` + Gegencheck
+  gegen Tag 6/Tag 11). Ergebnis: reiner Translations-Schwellwert (0,25m)
+  ist die klar beste Variante, Lowe's-Ratio und RANSAC-Schwelle sind
+  ungeeignet/kontraproduktiv. **Wichtiger Fund**: Schwellwert muss zum
+  Aufnahmeprotokoll passen (0,25m ungeeignet für Tag 6s Stop-and-Shoot,
+  bestätigt das am 2026-09-15 befürchtete Überanpassungsrisiko) — Filter
+  bleibt daher standardmäßig deaktiviert, kein universeller Default.
+  Details in `docs/decisions.md` (2026-09-21, Teil 4).
+- 🟡 Bestätigung des Filters auf dem Pi selbst (OpenCV 4.10.0) mit neuer
+  Aufnahme steht noch aus — heutige Optimierung lief komplett offline auf
+  dem Mac (OpenCV 5.0.0), das reproduziert die Pi-Live-Trajektorie nicht
+  exakt (Plattform-Diskrepanz, Details in `docs/decisions.md`).
+- 🔴 **Vierter Fehlermodus gefunden**: anhaltendes "Einfrieren" der
+  Trajektorie (Frames 34-50 in `flur_route_v2`) durch Fernbereichs-
+  dominierte Merkmale (89% der Matches >2m Tiefe, median 2,74m) — kein
+  Ausreißer, keiner der heutigen Filter erkennt das. Neues Diagnose-Skript
+  `scripts/check_real_temporal_matches.py` (Tiefenfarbcodierte Matches auf
+  echten rektifizierten Bildern) bestätigt visuell + quantitativ. Meine
+  erste Vermutung (Nahbereichs-Fehler) war falsch, User-Korrektur war
+  richtig. Kein Software-Fix heute, als Ausblick/Limitation dokumentiert.
+  Details in `docs/decisions.md` (2026-09-21, Teil 5).
+- 🟡 Committen/Pushen dieser Sequenzen + Code-/Doku-Änderungen — Rückfrage
+  an User ausstehend (siehe `CLAUDE.md`, nie ungefragt committen)
+
 ## Vorgemerkt (nach Phase 3) — Parameter-Sensitivitätsprüfung statt Optimierungs-Loop
 
 Aus der Diskussion 2026-09-15 (siehe `docs/decisions.md`): Idee (User) war
