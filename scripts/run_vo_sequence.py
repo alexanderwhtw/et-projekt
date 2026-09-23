@@ -118,6 +118,20 @@ def main() -> None:
         help="Suffix fuer den Ergebnisordner (results/measurements/<datum>_vo_sequence_test_<tag>/), "
         "um mehrere Laeufe am selben Tag nicht zu ueberschreiben.",
     )
+    parser.add_argument(
+        "--depth-weighted",
+        action="store_true",
+        help="Gewichtete Kabsch/Procrustes-Anpassung: Punkte werden im finalen RANSAC-Refit "
+        "nach 1/Z^depth-weight-power gewichtet statt gleich behandelt (siehe depth_weights(), "
+        "docs/decisions.md 2026-09-23) -- daempft den Einfluss ferner, tiefenungenauer Punkte.",
+    )
+    parser.add_argument(
+        "--depth-weight-power",
+        type=float,
+        default=4.0,
+        help="Exponent fuer --depth-weighted (Default 4.0 = inverse Varianz, siehe Delta_Z ~ Z^2 "
+        "Fehlerfortpflanzung in docs/decisions.md 2026-09-23).",
+    )
     args = parser.parse_args()
     reference_points_path = args.reference_points or (args.sequence_dir / "ground_truth.yaml")
 
@@ -174,6 +188,8 @@ def main() -> None:
                 seed=args.seed,
                 max_translation_m=effective_max_translation_m,
                 max_rotation_deg=effective_max_rotation_deg,
+                use_depth_weighting=args.depth_weighted,
+                depth_weight_power=args.depth_weight_power,
             )
         except ImplausiblePoseError as e:
             # skip: repeat prev pose, keep matching against the last trusted state
@@ -231,6 +247,8 @@ def main() -> None:
                 "ransac_inlier_threshold": args.ransac_inlier_threshold,
                 "max_translation_m": args.max_translation_m,
                 "max_rotation_deg": args.max_rotation_deg,
+                "depth_weighted": args.depth_weighted,
+                "depth_weight_power": args.depth_weight_power if args.depth_weighted else None,
                 "n_skipped": n_skipped,
                 "positions": [p.tolist() for p in positions],
                 "rotations": [r.tolist() for r in rotations],

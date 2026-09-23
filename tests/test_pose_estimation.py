@@ -5,6 +5,7 @@ import pytest
 from src.localization.pose_estimation import (
     ImplausiblePoseError,
     check_pose_plausibility,
+    depth_weights,
     estimate_relative_pose,
     estimate_relative_pose_ransac,
     relative_pose_magnitude,
@@ -168,3 +169,84 @@ def test_check_pose_plausibility_disabled_bounds_never_raise():
     R, _ = cv2.Rodrigues(np.array([0.0, np.radians(179.0), 0.0]))
     t = np.array([100.0, 100.0, 100.0])
     check_pose_plausibility(R, t, max_translation_m=None, max_rotation_deg=None)  # must not raise
+
+
+def test_depth_weights_favors_near_points():
+    # same lateral position, only depth differs -- isolates the depth effect
+    points = np.array([[0.0, 0.0, 0.5], [0.0, 0.0, 3.0]])
+    w = depth_weights(points, points)
+
+    assert w[0] > w[1]
+    assert w[0] / w[1] == pytest.approx((3.0 / 0.5) ** 4, rel=1e-6)  # default power=4 (inverse-variance)
+
+
+def test_depth_weights_power_parameter():
+    points = np.array([[0.0, 0.0, 0.5], [0.0, 0.0, 3.0]])
+    w = depth_weights(points, points, power=2.0)
+
+    assert w[0] / w[1] == pytest.approx((3.0 / 0.5) ** 2, rel=1e-6)
+
+
+def test_estimate_relative_pose_uniform_weights_match_default():
+    points_curr = _random_points()
+    true_t = np.array([0.02, 0.01, 0.03])
+    points_prev = points_curr + true_t
+
+    R_default, t_default = estimate_relative_pose(points_prev, points_curr)
+    R_uniform, t_uniform = estimate_relative_pose(points_prev, points_curr, weights=np.ones(len(points_curr)))
+
+    np.testing.assert_allclose(R_default, R_uniform, atol=1e-9)
+    np.testing.assert_allclose(t_default, t_uniform, atol=1e-9)
+
+
+def test_estimate_relative_pose_weighted_downweights_noisy_far_point():
+    # Motivating scenario for depth_weights() (docs/decisions.md, 2026-09-23):
+    # near points are exact, a far point carries the kind of depth-only error
+    # real stereo triangulation produces at range (see the Delta_Z ~ Z^2
+    # analysis) -- an unweighted fit lets it pull the estimate off; a
+    # depth-weighted fit should barely notice it.
+    points_curr = np.array(
+        [
+            [0.1, 0.1, 0.5],
+            [-0.1, 0.1, 0.5],
+            [0.0, -0.1, 0.5],
+            [0.0, 0.0, 3.0],
+        ]
+    )
+    true_t = np.array([0.05, 0.0, 0.0])
+    points_prev = points_curr + true_t
+    points_prev[3] += np.array([0.0, 0.0, 0.5])  # depth-only error on the far point
+
+    _, t_unweighted = estimate_relative_pose(points_prev, points_curr)
+    weights = depth_weights(points_prev, points_curr)
+    _, t_weighted = estimate_relative_pose(points_prev, points_curr, weights)
+
+    assert np.linalg.norm(t_weighted - true_t) < np.linalg.norm(t_unweighted - true_t)
+    np.testing.assert_allclose(t_weighted, true_t, atol=0.01)
+
+
+def test_ransac_depth_weighting_reduces_bias_from_far_inliers():
+    # Realistic-scale scenario: 15 near, correct points + 5 far points with a
+    # depth-only bias (0.2m at ~3m range, consistent with the project's own
+    # Delta_Z ~ Z^2/(f*B) error-propagation analysis, docs/decisions.md
+    # 2026-09-23) -- loose enough inlier_threshold that RANSAC accepts all 20
+    # as inliers in both cases (isolates the refit weighting, not consensus).
+    rng = np.random.default_rng(3)
+    near_curr = np.hstack([rng.uniform(-0.3, 0.3, size=(15, 2)), rng.uniform(0.3, 0.6, size=(15, 1))])
+    far_curr = np.hstack([rng.uniform(-0.3, 0.3, size=(5, 2)), rng.uniform(2.5, 3.0, size=(5, 1))])
+    points_curr = np.vstack([near_curr, far_curr])
+
+    true_t = np.array([0.05, -0.02, 0.03])
+    points_prev = points_curr + true_t
+    points_prev[15:] += np.array([0.0, 0.0, 0.2])
+
+    _, t_unweighted, mask_unweighted = estimate_relative_pose_ransac(
+        points_prev, points_curr, inlier_threshold=0.25, seed=0, use_depth_weighting=False
+    )
+    _, t_weighted, mask_weighted = estimate_relative_pose_ransac(
+        points_prev, points_curr, inlier_threshold=0.25, seed=0, use_depth_weighting=True
+    )
+
+    assert mask_unweighted.all() and mask_weighted.all()  # consensus step unaffected by weighting, as documented
+    assert np.linalg.norm(t_weighted - true_t) < np.linalg.norm(t_unweighted - true_t)
+    np.testing.assert_allclose(t_weighted, true_t, atol=0.005)

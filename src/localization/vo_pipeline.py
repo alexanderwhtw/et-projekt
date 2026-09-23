@@ -104,6 +104,8 @@ def step_vo_pipeline(
     seed: int | None = None,
     max_translation_m: float | None = None,
     max_rotation_deg: float | None = None,
+    use_depth_weighting: bool = False,
+    depth_weight_power: float = 4.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Process one new stereo frame against the previous frame's VO state.
 
@@ -135,6 +137,11 @@ def step_vo_pipeline(
             per-step motion bounds (see check_pose_plausibility(),
             docs/decisions.md 2026-09-21). None (default) disables the
             check entirely, preserving prior behaviour.
+        use_depth_weighting, depth_weight_power: forwarded to
+            estimate_relative_pose_ransac() (see docs/decisions.md,
+            2026-09-23) -- down-weights far/noisy triangulated points in the
+            final rigid-pose refit instead of treating every RANSAC inlier
+            equally. Default False preserves prior behaviour.
 
     Returns:
         (pose, points_3d, descriptors) -- the new absolute pose, and the new
@@ -167,7 +174,13 @@ def step_vo_pipeline(
     matched_prev = prev_points[[m.queryIdx for m in temporal_matches]]
     matched_curr = points_curr[[m.trainIdx for m in temporal_matches]]
     R, t, _inlier_mask = estimate_relative_pose_ransac(
-        matched_prev, matched_curr, ransac_inlier_threshold, ransac_iterations, seed
+        matched_prev,
+        matched_curr,
+        ransac_inlier_threshold,
+        ransac_iterations,
+        seed,
+        use_depth_weighting,
+        depth_weight_power,
     )
     check_pose_plausibility(R, t, max_translation_m, max_rotation_deg)
 
@@ -189,6 +202,8 @@ def run_vo_pipeline(
     seed: int | None = None,
     max_translation_m: float | None = None,
     max_rotation_deg: float | None = None,
+    use_depth_weighting: bool = False,
+    depth_weight_power: float = 4.0,
 ) -> list[np.ndarray]:
     """Run the VO chain over a sequence of already-captured stereo frames.
 
@@ -273,6 +288,8 @@ def run_vo_pipeline(
                 seed,
                 effective_max_translation_m,
                 effective_max_rotation_deg,
+                use_depth_weighting,
+                depth_weight_power,
             )
         except ImplausiblePoseError:
             skip_streak += 1
