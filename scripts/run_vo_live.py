@@ -54,7 +54,7 @@ from src.calibration.io import load_calibration_result  # noqa: E402
 from src.calibration.rectification import compute_rectification_maps  # noqa: E402
 from src.capture.sequence import build_frame_paths  # noqa: E402
 from src.capture.session import capture_indexed_pair  # noqa: E402
-from src.localization.vo_pipeline import init_vo_step, step_vo_pipeline  # noqa: E402
+from src.localization.vo_pipeline import TrackingLostError, init_vo_step, step_vo_pipeline  # noqa: E402
 
 DEFAULT_CALIBRATION = REPO_ROOT / "results" / "calibration" / "2026-09-15_calibration.yaml"
 RESULTS_DIR = REPO_ROOT / "results" / "measurements"
@@ -116,6 +116,7 @@ def main() -> None:
 
     print(f"Live-VO: {args.n_frames} Frames, Ziel {args.sequence_dir}.")
     poses = []
+    skipped = []  # one entry per skipped frame: {"frame_index", "reason", "detail"} -- siehe docs/decisions.md 2026-09-23
     try:
         for frame_index in range(args.n_frames):
             if frame_index > 0:
@@ -134,6 +135,16 @@ def main() -> None:
                     pose, points, descriptors = step_vo_pipeline(
                         image_L, image_R, P_L, P_R, pose, points, descriptors, seed=args.seed
                     )
+                except TrackingLostError as e:
+                    # NO pose could be estimated at all -- assume zero motion since the last
+                    # trusted pose, but re-baseline onto this frame's own triangulated points so
+                    # the NEXT frame is matched against fresh data instead of an increasingly
+                    # stale reference (see TrackingLostError docstring, docs/decisions.md 2026-09-23).
+                    skipped.append({"frame_index": frame_index, "reason": "tracking_lost", "detail": str(e)})
+                    points, descriptors = e.points_curr, e.descriptors_curr
+                    poses.append(pose)
+                    print(f"  Frame {frame_index}: TRACKING VERLOREN, neu gebaselined ({e})")
+                    continue
                 except RuntimeError as e:
                     print(f"Frame {frame_index}: {e} -- Live-VO gestoppt, bisherige Trajektorie wird gespeichert.")
                     break
@@ -142,6 +153,9 @@ def main() -> None:
             print(f"  Frame {frame_index}: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]  ({elapsed:.2f}s)")
     except KeyboardInterrupt:
         print("\nAbgebrochen (Strg+C) -- bisherige Trajektorie wird gespeichert.")
+
+    if skipped:
+        print(f"\n{len(skipped)} Frame(s) mit Tracking-Verlust uebersprungen (neu gebaselined statt gestoppt).")
 
     if not poses:
         print("Keine Frames verarbeitet, kein Ergebnis gespeichert.")
@@ -160,6 +174,8 @@ def main() -> None:
                 "sequence_dir": str(args.sequence_dir),
                 "calibration": str(args.calibration),
                 "seed": args.seed,
+                "n_skipped_tracking_lost": len(skipped),
+                "skipped": skipped,
                 "positions": positions,
                 "rotations": rotations,
             },

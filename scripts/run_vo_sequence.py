@@ -42,7 +42,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from src.calibration.io import load_calibration_result  # noqa: E402
 from src.calibration.rectification import compute_rectification_maps  # noqa: E402
 from src.localization.pose_estimation import ImplausiblePoseError  # noqa: E402
-from src.localization.vo_pipeline import init_vo_step, step_vo_pipeline  # noqa: E402
+from src.localization.vo_pipeline import TrackingLostError, init_vo_step, step_vo_pipeline  # noqa: E402
 
 DEFAULT_CALIBRATION = REPO_ROOT / "results" / "calibration" / "2026-09-07_calibration.yaml"
 RESULTS_DIR = REPO_ROOT / "results" / "measurements"
@@ -165,7 +165,7 @@ def main() -> None:
     poses = [pose]
     print(f"  Frame 0: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
 
-    n_skipped = 0
+    skipped = []  # one entry per skipped frame: {"frame_index", "reason", "detail"} -- siehe docs/decisions.md 2026-09-23
     skip_streak = 0
     for frame_index, entry in enumerate(entries[1:], start=1):
         image_L, image_R = load_rectified(entry)
@@ -191,11 +191,22 @@ def main() -> None:
                 use_depth_weighting=args.depth_weighted,
                 depth_weight_power=args.depth_weight_power,
             )
+        except TrackingLostError as e:
+            # NO pose could be estimated at all (unlike ImplausiblePoseError below) -- assume zero
+            # motion since the last trusted pose, but re-baseline onto this frame's own triangulated
+            # points so the NEXT frame is matched against fresh data instead of an increasingly
+            # stale reference (see TrackingLostError docstring, docs/decisions.md 2026-09-23).
+            skip_streak += 1
+            skipped.append({"frame_index": frame_index, "reason": "tracking_lost", "detail": str(e)})
+            poses.append(pose)
+            points, descriptors = e.points_curr, e.descriptors_curr
+            print(f"  Frame {frame_index}: TRACKING VERLOREN, neu gebaselined ({e})")
+            continue
         except ImplausiblePoseError as e:
             # skip: repeat prev pose, keep matching against the last trusted state
             # (see run_vo_pipeline() docstring, src/localization/vo_pipeline.py)
-            n_skipped += 1
             skip_streak += 1
+            skipped.append({"frame_index": frame_index, "reason": "implausible_pose", "detail": str(e)})
             poses.append(pose)
             print(f"  Frame {frame_index}: UEBERSPRUNGEN ({e})")
             continue
@@ -205,8 +216,13 @@ def main() -> None:
         pose, points, descriptors = new_pose, new_points, new_descriptors
         poses.append(pose)
         print(f"  Frame {frame_index}: [{pose[0, 3]:+.4f}, {pose[1, 3]:+.4f}, {pose[2, 3]:+.4f}]")
-    if n_skipped:
-        print(f"\n{n_skipped} Frame(s) durch Plausibilitaets-Filter uebersprungen.")
+    n_skipped_implausible = sum(1 for s in skipped if s["reason"] == "implausible_pose")
+    n_skipped_tracking_lost = sum(1 for s in skipped if s["reason"] == "tracking_lost")
+    if skipped:
+        print(
+            f"\n{len(skipped)} Frame(s) uebersprungen "
+            f"({n_skipped_implausible} Plausibilitaets-Filter, {n_skipped_tracking_lost} Tracking verloren)."
+        )
 
     positions = np.array([pose[:3, 3] for pose in poses])
     rotations = np.array([pose[:3, :3] for pose in poses])
@@ -249,7 +265,10 @@ def main() -> None:
                 "max_rotation_deg": args.max_rotation_deg,
                 "depth_weighted": args.depth_weighted,
                 "depth_weight_power": args.depth_weight_power if args.depth_weighted else None,
-                "n_skipped": n_skipped,
+                "n_skipped": len(skipped),
+                "n_skipped_implausible": n_skipped_implausible,
+                "n_skipped_tracking_lost": n_skipped_tracking_lost,
+                "skipped": skipped,
                 "positions": [p.tolist() for p in positions],
                 "rotations": [r.tolist() for r in rotations],
             },

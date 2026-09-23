@@ -30,6 +30,33 @@ from .temporal_matching import match_temporal_features
 from .trajectory import to_homogeneous
 
 
+class TrackingLostError(RuntimeError):
+    """Raised by step_vo_pipeline() when NO relative pose could be estimated
+    at all (too few temporal matches, or RANSAC found <3 inliers) -- unlike
+    ImplausiblePoseError, there is no computed pose to threshold/reject, so
+    a caller cannot just discard "the estimate": there IS no estimate.
+
+    The new frame's OWN triangulated points are still valid, though --
+    stereo triangulation (within one frame) is independent of temporal
+    matching (between frames), so only the link to the previous frame was
+    lost, not the new frame's own geometry. This carries points_curr/
+    descriptors_curr so a caller that wants to keep the trajectory going
+    despite total tracking loss can re-baseline onto the new frame (assume
+    zero motion since the last trusted pose, then resume matching from
+    here) instead of stopping for good -- see run_vo_pipeline() and
+    docs/decisions.md, 2026-09-23. Deliberately a *silent* zero-motion
+    assumption for the lost gap, not a corrected estimate -- any real
+    motion during the gap is simply missing from the trajectory, a
+    distinct failure mode from an outlier, so callers must count/report
+    this separately from ImplausiblePoseError skips (see
+    run_vo_pipeline()'s n_tracking_lost)."""
+
+    def __init__(self, message: str, points_curr: np.ndarray, descriptors_curr: np.ndarray):
+        super().__init__(message)
+        self.points_curr = points_curr
+        self.descriptors_curr = descriptors_curr
+
+
 def extract_frame_points(
     image_L: np.ndarray,
     image_R: np.ndarray,
@@ -148,16 +175,17 @@ def step_vo_pipeline(
         state to pass into the next step_vo_pipeline() call.
 
     Raises:
-        RuntimeError: fewer than min_temporal_matches valid temporal
+        TrackingLostError: fewer than min_temporal_matches valid temporal
             correspondences to the previous frame, or RANSAC couldn't find
             a rigid pose with at least 3 inliers among the matches (see
             estimate_relative_pose_ransac()) -- no usable pose exists at
-            all, the pipeline stops rather than silently produce an
-            unreliable one (no loop-closure/correction exists to fix it
-            later, see docs/decisions.md, 2026-09-04).
+            all. A subclass of RuntimeError (see its docstring) carrying
+            the new frame's own points_curr/descriptors_curr, so a caller
+            can choose to re-baseline onto this frame (see
+            run_vo_pipeline()) instead of stopping the trajectory for good.
         ImplausiblePoseError: a pose WAS estimated, but its magnitude
-            exceeds max_translation_m/max_rotation_deg -- unlike the plain
-            RuntimeError above, prev_pose/prev_points/prev_descriptors
+            exceeds max_translation_m/max_rotation_deg -- unlike
+            TrackingLostError above, prev_pose/prev_points/prev_descriptors
             remain a valid, usable state, so callers (see run_vo_pipeline())
             can skip this one frame and retry with the next one instead of
             stopping the trajectory for good.
@@ -166,22 +194,27 @@ def step_vo_pipeline(
 
     temporal_matches = match_temporal_features(prev_descriptors, descriptors_curr, ratio_threshold)
     if len(temporal_matches) < min_temporal_matches:
-        raise RuntimeError(
+        raise TrackingLostError(
             f"only {len(temporal_matches)} temporal matches (< {min_temporal_matches}) -- "
-            "cannot estimate relative pose"
+            "cannot estimate relative pose",
+            points_curr,
+            descriptors_curr,
         )
 
     matched_prev = prev_points[[m.queryIdx for m in temporal_matches]]
     matched_curr = points_curr[[m.trainIdx for m in temporal_matches]]
-    R, t, _inlier_mask = estimate_relative_pose_ransac(
-        matched_prev,
-        matched_curr,
-        ransac_inlier_threshold,
-        ransac_iterations,
-        seed,
-        use_depth_weighting,
-        depth_weight_power,
-    )
+    try:
+        R, t, _inlier_mask = estimate_relative_pose_ransac(
+            matched_prev,
+            matched_curr,
+            ransac_inlier_threshold,
+            ransac_iterations,
+            seed,
+            use_depth_weighting,
+            depth_weight_power,
+        )
+    except RuntimeError as e:
+        raise TrackingLostError(str(e), points_curr, descriptors_curr) from e
     check_pose_plausibility(R, t, max_translation_m, max_rotation_deg)
 
     pose = prev_pose @ to_homogeneous(R, t)
@@ -204,7 +237,7 @@ def run_vo_pipeline(
     max_rotation_deg: float | None = None,
     use_depth_weighting: bool = False,
     depth_weight_power: float = 4.0,
-) -> list[np.ndarray]:
+) -> tuple[list[np.ndarray], list[dict]]:
     """Run the VO chain over a sequence of already-captured stereo frames.
 
     Batch convenience wrapper around init_vo_step()/step_vo_pipeline() (see
@@ -226,35 +259,48 @@ def run_vo_pipeline(
             (see docs/decisions.md, 2026-09-21).
 
     Returns:
-        List of len(stereo_frames) absolute 4x4 poses, one per frame. A
-        frame rejected by the plausibility filter (see below) repeats the
-        previous frame's pose rather than shortening the list, so poses[i]
-        always corresponds to stereo_frames[i] (ground-truth/plotting code
-        matches by index, see docs/decisions.md 2026-09-21).
+        (poses, skipped):
+        - poses: list of len(stereo_frames) absolute 4x4 poses, one per
+          frame. A skipped frame (either reason, see below) repeats the
+          previous frame's pose rather than shortening the list, so
+          poses[i] always corresponds to stereo_frames[i] (ground-truth/
+          plotting code matches by index, see docs/decisions.md 2026-09-21).
+        - skipped: one entry per skipped frame, each
+          {"frame_index": int, "reason": "implausible_pose" |
+          "tracking_lost", "detail": str} -- lets a caller check exactly
+          what was skipped and why, instead of only a bare count (see
+          docs/decisions.md, 2026-09-23).
 
     Raises:
         ValueError: no frames given.
-        RuntimeError: a consecutive frame pair has fewer than
-            min_temporal_matches valid temporal correspondences, or no
-            usable pose at all could be found (see step_vo_pipeline()) --
-            an unrecoverable loss of tracking, unlike the case below.
-        ImplausiblePoseError is NOT raised out of this function: when
-            step_vo_pipeline() rejects a frame as implausible, that one
-            frame is skipped (its pose repeats the previous frame's, its
-            points/descriptors are discarded) and the next frame is matched
-            against the last trusted state instead -- see
-            docs/decisions.md, 2026-09-21: the observed real-world failures
-            were isolated single-frame mismatches at repetitive scene
-            structures, with normal tracking resuming immediately after,
-            so discarding just the bad frame is preferable to stopping the
-            whole trajectory (which min_temporal_matches/RANSAC failures
-            still do, since no valid state remains in that case).
+        RuntimeError: only for a genuinely unexpected failure that is
+            neither ImplausiblePoseError nor TrackingLostError -- both of
+            those are recoverable (see below) and never propagate out of
+            this function; nothing in the current pipeline raises a bare
+            RuntimeError, this is a defensive fallback.
+        Neither ImplausiblePoseError nor TrackingLostError is raised out of
+            this function -- both are caught, appended to `skipped`, and
+            the trajectory continues:
+        - ImplausiblePoseError: a pose WAS estimated but its magnitude looks
+          wrong (see docs/decisions.md, 2026-09-21) -- the frame is skipped,
+          matching against the last trusted state resumes with the next
+          frame (points/descriptors are NOT updated).
+        - TrackingLostError: NO pose could be estimated at all (see
+          docs/decisions.md, 2026-09-23) -- the frame is skipped (assuming
+          zero motion since the last trusted pose), but points/descriptors
+          ARE updated to the failed frame's own triangulated points, so the
+          next frame is matched against this fresh reference instead of an
+          increasingly stale one. This is a real trade: any actual motion
+          during the gap is silently missing from the trajectory rather
+          than flagged as an outlier -- see the `skipped` entry to tell the
+          two cases apart.
     """
     if not stereo_frames:
         raise ValueError("need at least 1 stereo frame")
 
     pose, points, descriptors = init_vo_step(*stereo_frames[0], P_L, P_R, initial_pose, n_features, max_y_diff)
     poses = [pose]
+    skipped: list[dict] = []
 
     # Consecutive skips widen the real motion gap to bridge (more real time/
     # distance has passed since the last trusted frame) -- a FIXED bound
@@ -264,7 +310,8 @@ def run_vo_pipeline(
     # with growing reported magnitudes, ending in a hard RANSAC failure.
     # Scaling the bound by (1 + consecutive skip count) keeps it a per-
     # ORIGINAL-frame-interval bound regardless of how many frames were
-    # skipped in between.
+    # skipped in between -- applies to BOTH skip reasons, since a
+    # tracking-lost skip also widens the same real motion gap.
     skip_streak = 0
     for frame_index, (image_L, image_R) in enumerate(stereo_frames[1:], start=1):
         scale = 1 + skip_streak
@@ -291,8 +338,15 @@ def run_vo_pipeline(
                 use_depth_weighting,
                 depth_weight_power,
             )
-        except ImplausiblePoseError:
+        except TrackingLostError as e:
             skip_streak += 1
+            skipped.append({"frame_index": frame_index, "reason": "tracking_lost", "detail": str(e)})
+            poses.append(pose)  # assume zero motion since the last trusted pose
+            points, descriptors = e.points_curr, e.descriptors_curr  # re-baseline onto this frame's own points
+            continue
+        except ImplausiblePoseError as e:
+            skip_streak += 1
+            skipped.append({"frame_index": frame_index, "reason": "implausible_pose", "detail": str(e)})
             poses.append(pose)  # skip this frame: repeat prev pose, keep matching against the last trusted state
             continue
         except RuntimeError as e:
@@ -301,4 +355,4 @@ def run_vo_pipeline(
         pose, points, descriptors = new_pose, new_points, new_descriptors
         poses.append(pose)
 
-    return poses
+    return poses, skipped

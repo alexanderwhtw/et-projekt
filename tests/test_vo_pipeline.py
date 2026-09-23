@@ -3,7 +3,13 @@ import numpy as np
 import pytest
 
 from src.localization.pose_estimation import ImplausiblePoseError
-from src.localization.vo_pipeline import extract_frame_points, init_vo_step, run_vo_pipeline, step_vo_pipeline
+from src.localization.vo_pipeline import (
+    TrackingLostError,
+    extract_frame_points,
+    init_vo_step,
+    run_vo_pipeline,
+    step_vo_pipeline,
+)
 
 
 def _projection_matrices(fx=500.0, fy=500.0, cx=200.0, cy=200.0, baseline=0.06):
@@ -58,9 +64,10 @@ def test_run_vo_pipeline_recovers_known_lateral_translation():
     left1 = np.roll(left0, -shift_px, axis=1)
     right1 = np.roll(left1, -disparity, axis=1)
 
-    poses = run_vo_pipeline([(left0, right0), (left1, right1)], P_L, P_R, seed=0)
+    poses, skipped = run_vo_pipeline([(left0, right0), (left1, right1)], P_L, P_R, seed=0)
 
     assert len(poses) == 2
+    assert skipped == []
     np.testing.assert_allclose(poses[0], np.eye(4))
 
     translation = poses[1][:3, 3]
@@ -75,9 +82,10 @@ def test_run_vo_pipeline_single_frame_returns_only_initial_pose():
     P_L, P_R = _projection_matrices()
     frame = (_make_scene(), np.roll(_make_scene(), -20, axis=1))
 
-    poses = run_vo_pipeline([frame], P_L, P_R)
+    poses, skipped = run_vo_pipeline([frame], P_L, P_R)
 
     assert len(poses) == 1
+    assert skipped == []
     np.testing.assert_allclose(poses[0], np.eye(4))
 
 
@@ -87,9 +95,12 @@ def test_run_vo_pipeline_rejects_empty_input():
         run_vo_pipeline([], P_L, P_R)
 
 
-def test_run_vo_pipeline_raises_on_unrelated_frames():
-    # two completely different random-noise images share no real features
-    # -> too few temporal matches to estimate a pose
+def test_run_vo_pipeline_skips_tracking_loss_instead_of_raising():
+    # two completely different random-noise images share no real features ->
+    # too few temporal matches to estimate a pose. Used to hard-stop the
+    # whole run (RuntimeError); now treated like an implausible pose --
+    # skipped (assumed zero motion), trajectory continues. See
+    # TrackingLostError, docs/decisions.md 2026-09-23.
     P_L, P_R = _projection_matrices()
     rng = np.random.default_rng(0)
     noise_a = rng.integers(0, 255, size=(400, 400), dtype=np.uint8)
@@ -97,8 +108,41 @@ def test_run_vo_pipeline_raises_on_unrelated_frames():
     frame_a = (noise_a, np.roll(noise_a, -20, axis=1))
     frame_b = (noise_b, np.roll(noise_b, -20, axis=1))
 
-    with pytest.raises(RuntimeError):
-        run_vo_pipeline([frame_a, frame_b], P_L, P_R)
+    poses, skipped = run_vo_pipeline([frame_a, frame_b], P_L, P_R)
+
+    assert len(poses) == 2
+    np.testing.assert_allclose(poses[1], poses[0])
+    assert skipped == [{"frame_index": 1, "reason": "tracking_lost", "detail": skipped[0]["detail"]}]
+
+
+def test_run_vo_pipeline_rebaselines_onto_new_frame_after_tracking_loss():
+    # proves the re-baseline mechanism specifically, not just that the run
+    # survives: frame 2 is a small, known shift FROM frame 1's own noise
+    # pattern -- only trackable if the pipeline matched it against frame 1's
+    # own triangulated points (TrackingLostError.points_curr/descriptors_curr)
+    # instead of still trying frame 0's now-unrelated reference.
+    fx, baseline, disparity, shift_px = 500.0, 0.06, 20, 15
+    depth = fx * baseline / disparity
+    expected_tx = shift_px * depth / fx
+    P_L, P_R = _projection_matrices(fx=fx, fy=fx, baseline=baseline)
+
+    left0 = _make_scene(seed=1)
+    right0 = np.roll(left0, -disparity, axis=1)
+    rng = np.random.default_rng(7)
+    left1 = rng.integers(0, 255, size=(400, 400), dtype=np.uint8)  # unrelated to frame 0 -> tracking lost
+    right1 = np.roll(left1, -disparity, axis=1)
+    left2 = np.roll(left1, -shift_px, axis=1)  # small shift FROM frame 1's own pattern
+    right2 = np.roll(left2, -disparity, axis=1)
+
+    poses, skipped = run_vo_pipeline([(left0, right0), (left1, right1), (left2, right2)], P_L, P_R, seed=0)
+
+    assert len(poses) == 3
+    assert [s["frame_index"] for s in skipped] == [1]
+    assert skipped[0]["reason"] == "tracking_lost"
+    np.testing.assert_allclose(poses[1], poses[0])  # frame 1: zero motion assumed
+    # frame 2 recovers the shift from frame 1 -> proves it matched against
+    # frame 1's own points, not frame 0's stale (unrelated) reference
+    assert abs(poses[2][0, 3] - expected_tx) < 0.01
 
 
 def test_init_vo_step_defaults_to_identity_pose():
@@ -138,7 +182,7 @@ def test_step_vo_pipeline_matches_run_vo_pipeline_on_same_sequence():
     right2 = np.roll(left2, -disparity, axis=1)
     frames = [(left0, right0), (left1, right1), (left2, right2)]
 
-    batch_poses = run_vo_pipeline(frames, P_L, P_R, seed=0)
+    batch_poses, _skipped = run_vo_pipeline(frames, P_L, P_R, seed=0)
 
     pose, points, descriptors = init_vo_step(*frames[0], P_L, P_R)
     streaming_poses = [pose]
@@ -184,11 +228,12 @@ def test_run_vo_pipeline_skips_implausible_frame_and_continues_from_last_trusted
     left2 = np.roll(left0, -small_shift_px, axis=1)  # small shift from the ORIGINAL frame 0
     right2 = np.roll(left2, -disparity, axis=1)
 
-    poses = run_vo_pipeline(
+    poses, skipped = run_vo_pipeline(
         [(left0, right0), (left1, right1), (left2, right2)], P_L, P_R, seed=0, max_translation_m=0.2
     )
 
     assert len(poses) == 3  # skipped frame still occupies a slot, see docstring
+    assert skipped == [{"frame_index": 1, "reason": "implausible_pose", "detail": skipped[0]["detail"]}]
     np.testing.assert_allclose(poses[1], poses[0])  # frame 1 rejected -> repeats frame 0's pose
     # frame 2 must match the SMALL shift from frame 0 (last trusted state), not compound the huge one
     assert abs(poses[2][0, 3] - expected_tx_small) < 0.01
@@ -216,11 +261,12 @@ def test_run_vo_pipeline_scales_plausibility_bound_after_consecutive_skips():
     left2 = np.roll(left0, -shift_px_2, axis=1)  # independent shift from frame 0, not from frame 1
     right2 = np.roll(left2, -disparity, axis=1)
 
-    poses = run_vo_pipeline(
+    poses, skipped = run_vo_pipeline(
         [(left0, right0), (left1, right1), (left2, right2)], P_L, P_R, seed=0, max_translation_m=base_bound
     )
 
     assert len(poses) == 3
+    assert [s["frame_index"] for s in skipped] == [1]
     np.testing.assert_allclose(poses[1], poses[0])  # frame 1 skipped (0.12m > 0.1m base bound)
     # frame 2 (0.15m from frame 0) exceeds the base bound too, but is recovered because the
     # bound doubles after one skip (0.15m < 0.2m) -- proves the scaling, not just plain recovery
@@ -238,3 +284,22 @@ def test_step_vo_pipeline_raises_on_too_few_temporal_matches():
 
     with pytest.raises(RuntimeError):
         step_vo_pipeline(noise_b, np.roll(noise_b, -20, axis=1), P_L, P_R, pose, points, descriptors)
+
+
+def test_step_vo_pipeline_raises_tracking_lost_error_with_usable_points():
+    # TrackingLostError is a RuntimeError subclass (see test above) but
+    # additionally carries the new frame's own triangulated points, so a
+    # caller can re-baseline onto them (see run_vo_pipeline(),
+    # docs/decisions.md 2026-09-23) instead of just stopping.
+    P_L, P_R = _projection_matrices()
+    rng = np.random.default_rng(0)
+    noise_a = rng.integers(0, 255, size=(400, 400), dtype=np.uint8)
+    noise_b = rng.integers(0, 255, size=(400, 400), dtype=np.uint8)
+
+    pose, points, descriptors = init_vo_step(noise_a, np.roll(noise_a, -20, axis=1), P_L, P_R)
+
+    with pytest.raises(TrackingLostError) as excinfo:
+        step_vo_pipeline(noise_b, np.roll(noise_b, -20, axis=1), P_L, P_R, pose, points, descriptors)
+
+    assert excinfo.value.points_curr.shape[0] > 0
+    assert excinfo.value.points_curr.shape[0] == excinfo.value.descriptors_curr.shape[0]
